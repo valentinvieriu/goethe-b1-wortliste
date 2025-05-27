@@ -29,6 +29,9 @@ for img, d, e in input_data
   # fix p. 39-r
   e = e.sub(/1 Auf dem Brief fehlt der Absender/, "1. Auf dem Brief fehlt der Absender")
 
+  # fix up 11. Mai on p. 80
+  e = e.sub(/11\. Mai/, '11~Mai')
+
   # fix broken lists (item numbers in front)
   if e =~ /\A(([0-9]\.\n)+)\n/m
     m = $1
@@ -51,6 +54,9 @@ for img, d, e in input_data
     # sentence
     e = e.tr("\n", " ")
   end
+
+  # revert the 11~Mai from p. 80
+  e = e.sub(/11~Mai/, '11. Mai')
 
   # Cosmetic fixes to explanations
   e = e.sub(/Ding\? Damit/, 'Ding? - Damit') # p30
