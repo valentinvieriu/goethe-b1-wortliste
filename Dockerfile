@@ -1,14 +1,12 @@
 FROM node:22-bookworm-slim
 
 # Install system dependencies
+# sharp's dependencies: libvips is handled by pre-built binaries, but general build tools might be needed.
+# poppler-utils and wget are still needed for pdf conversion and download.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       imagemagick poppler-utils wget git ca-certificates \
+       poppler-utils wget git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# Fix ImageMagick policy for PDF and XPM processing
-RUN sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true && \
-    sed -i 's/rights="none" pattern="XPM"/rights="read|write" pattern="XPM"/' /etc/ImageMagick-6/policy.xml || true
 
 WORKDIR /app
 

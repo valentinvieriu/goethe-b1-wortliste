@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import sharp from 'sharp';
 import { promises as fs } from 'fs';
 import { CONFIG } from '../config.js';
 import { fileExists, padPageNumber } from '../utils/fs.js';
@@ -8,101 +8,84 @@ export class ImageProcessor {
     this.outputDir = CONFIG.OUTPUT_DIR;
   }
 
-  async cropColumnToXPM(imagePath, pageNum, column) {
+  async getColumnRawPixels(imagePath, pageNum, column) {
     const paddedPage = padPageNumber(pageNum);
     const columnConfig = column === 'l' ? CONFIG.LEFT_COLUMN : CONFIG.RIGHT_COLUMN;
-    const xpmPath = `${this.outputDir}/${paddedPage}-${column}.xpm`;
 
-    // Skip if already exists
-    if (await fileExists(xpmPath)) {
-      return xpmPath;
-    }
+    // We don't save the raw pixels directly, they are processed in memory.
+    // However, if we were to cache, it would be as a processed text file.
 
     const cropWidth = columnConfig.CROP_WIDTH;
     const cropHeight = CONFIG.IMAGE_HEIGHT;
     const cropX = columnConfig.CROP_X;
     const cropY = CONFIG.Y_OFFSET;
 
-    return new Promise((resolve, reject) => {
-      const args = [
-        imagePath,
-        '-crop', `${cropWidth}x${cropHeight}+${cropX}+${cropY}`,
-        xpmPath
-      ];
+    try {
+      const { data, info } = await sharp(imagePath)
+        .extract({ left: cropX, top: cropY, width: cropWidth, height: cropHeight })
+        .raw()
+        .toBuffer({ resolveWithObject: true });
 
-      const convert = spawn('convert', args);
-
-      convert.stderr.on('data', (data) => {
-        console.error(`convert crop error: ${data}`);
-      });
-
-      convert.on('close', (code) => {
-        if (code === 0) {
-          resolve(xpmPath);
-        } else {
-          reject(new Error(`convert crop exited with code ${code}. Args: ${args.join(' ')}`));
-        }
-      });
-
-      convert.on('error', (error) => {
-        reject(new Error(`Failed to start convert: ${error.message}`));
-      });
-    });
+      return { data, info };
+    } catch (error) {
+      throw new Error(`Failed to extract raw pixels for page ${paddedPage}, column ${column}: ${error.message}`);
+    }
   }
 
   async cropRegion(imagePath, x, y, width, height, outputPath) {
-    return new Promise((resolve, reject) => {
-      const args = [
-        imagePath,
-        '-crop', `${width}x${height}+${x}+${y}`,
-        '+repage',
-        outputPath
-      ];
-
-      const convert = spawn('convert', args);
-
-      convert.on('close', (code) => {
-        if (code === 0) {
-          resolve(outputPath);
-        } else {
-          reject(new Error(`convert exited with code ${code}`));
-        }
-      });
-
-      convert.on('error', (error) => {
-        reject(new Error(`Failed to start convert: ${error.message}`));
-      });
-    });
+    try {
+      await sharp(imagePath)
+        .extract({ left: x, top: y, width: width, height: height })
+        .toFile(outputPath);
+      return outputPath;
+    } catch (error) {
+      throw new Error(`Failed to crop region to ${outputPath}: ${error.message}`);
+    }
   }
 
   async annotateImage(imagePath, outputPath, rectangles) {
-    return new Promise((resolve, reject) => {
-      const args = [imagePath, '-fill', 'transparent', '-stroke', 'red'];
-      
+    try {
+      // Read the input image into a buffer to avoid potential file locking/path conflicts
+      const inputImageBuffer = await fs.readFile(imagePath);
+      const originalImage = sharp(inputImageBuffer);
+      const metadata = await originalImage.metadata();
+
+      const overlays = [];
       for (const rect of rectangles) {
-        args.push('-draw', `rectangle ${rect.x0},${rect.y0} ${rect.x1},${rect.y1}`);
+        // Create a blank red rectangle image
+        const rectBuffer = await sharp({
+          create: {
+            width: rect.x1 - rect.x0,
+            height: rect.y1 - rect.y0,
+            channels: 4,
+            background: { r: 255, g: 0, b: 0, alpha: 0.2 } // Semi-transparent red
+          }
+        })
+        .png()
+        .toBuffer();
+
+        overlays.push({
+          input: rectBuffer,
+          left: rect.x0,
+          top: rect.y0,
+          blend: 'over'
+        });
       }
-      
-      args.push(outputPath);
 
-      const convert = spawn('convert', args);
+      const tempOutputPath = `${outputPath}.tmp`; // Use a temporary file
 
-      convert.stderr.on('data', (data) => {
-        console.error(`convert annotation error: ${data}`);
-      });
+      await originalImage
+        .composite(overlays)
+        .toFile(tempOutputPath); // Write to temp file
 
-      convert.on('close', (code) => {
-        if (code === 0) {
-          resolve(outputPath);
-        } else {
-          reject(new Error(`convert annotation exited with code ${code}`));
-        }
-      });
+      // Rename the temporary file to the final output path
+      await fs.rename(tempOutputPath, outputPath);
 
-      convert.on('error', (error) => {
-        reject(new Error(`Failed to start convert for annotation: ${error.message}`));
-      });
-    });
+      return outputPath;
+    } catch (error) {
+      // Provide more specific context in the error message
+      throw new Error(`Failed to annotate image ${outputPath} from input ${imagePath}: ${error.message}`);
+    }
   }
 
   async cleanup(filePath) {

@@ -7,88 +7,69 @@ export class BreakDetector {
     this.threshold = CONFIG.BREAK_THRESHOLD;
   }
 
-  async detectBreaks(xmpPath, pageNum, column) {
+  /**
+   * Detects breaks in a column's raw pixel data.
+   * @param {Buffer} pixelBuffer - Raw pixel data buffer from sharp.
+   * @param {Object} info - Metadata from sharp ({ width, height, channels }).
+   * @param {number} pageNum - The page number.
+   * @param {string} column - The column ('l' or 'r').
+   * @returns {Array<Array<number>>} An array of [startY, endY] ranges.
+   */
+  detectBreaks(pixelBuffer, info, pageNum, column) {
     const paddedPage = padPageNumber(pageNum);
     const prefix = `${paddedPage}-${column}`;
-    
-    const content = await fs.readFile(xmpPath, 'utf8');
-    const ranges = this.parseXMP(content, prefix);
-    return ranges;
-  }
+    const { width, height, channels } = info;
 
-  parseXMP(content, prefix) {
-    const lines = content.split('\n');
-    let pixels = false;
-    let whiteCode = null;
     let y = 0;
     let state = 'trail';
     let start = null;
     let rectStart = 0;
     const ranges = [];
-    
+
     // Get overrides for this prefix
     const overrides = BREAK_OVERRIDES[prefix] || new Set();
 
-    for (const line of lines) {
-      // Find white color code
-      if (!pixels) {
-        const whiteMatch = line.match(/"(\w+)\s+c\s+white"/);
-        if (whiteMatch) {
-          whiteCode = whiteMatch[1];
-        }
-        if (line.match(/^\/\*\s+pixels\s+\*\/$/)) {
-          pixels = true;
-          continue;
-        }
-      }
-
-      if (!pixels) continue;
-
-      // End of pixels section
-      if (line.match(/^};/)) break;
-
-      // Check if line is empty (all white pixels)
-      const isEmpty = whiteCode && new RegExp(`^"(${whiteCode})+",?$`).test(line);
-      
-      // Check for override at this y coordinate
+    // Iterate through each row of pixels
+    for (y = 0; y < height; y++) {
+      // Check for override at this y coordinate (relative to cropped image)
       if (overrides.has(y)) {
         state = 'overridden';
-        start = 0;
+        start = 0; // Reset start for override to ensure a break is registered
       }
+
+      const rowIsEmpty = this.isRowEmpty(pixelBuffer, y, width, channels);
 
       // State machine for break detection
       switch (state) {
-        case 'trail':
-          if (!isEmpty) {
-            state = 'look';
+        case 'trail': // Trailing non-empty content, waiting for content to start
+          if (!rowIsEmpty) {
+            state = 'look'; // Found content, now looking for a break
           }
           break;
-          
-        case 'look':
-          if (isEmpty) {
-            state = 'found';
+
+        case 'look': // Looking for a break (empty line)
+          if (rowIsEmpty) {
+            state = 'found'; // Found an empty line, potential break start
             start = y;
           }
           break;
-          
-        case 'found':
-        case 'overridden':
-          if (isEmpty) {
-            if (y > start + this.threshold) {
+
+        case 'found': // Found an empty line, checking if it's long enough for a break
+        case 'overridden': // Overridden state forces a break
+          if (rowIsEmpty) {
+            if (y > start + this.threshold || state === 'overridden') {
               ranges.push([rectStart, y]);
               rectStart = y;
-              state = 'trail';
+              state = 'trail'; // Reset after a break
             }
           } else {
-            state = 'look';
+            state = 'look'; // Empty streak broken, continue looking for next break
           }
           break;
       }
-
-      y++;
     }
 
-    // Final range
+    // Add the final range if we were in a content or break state
     if (state !== 'trail') {
       ranges.push([rectStart, y]);
     }
@@ -96,8 +77,27 @@ export class BreakDetector {
     return ranges;
   }
 
-  async saveBreaks(ranges, outputPath) {
-    const content = ranges.map(range => range.join(' ')).join('\n');
-    await fs.writeFile(outputPath, content);
+  /**
+   * Checks if a row of pixels is predominantly "white" (empty).
+   * Assumes RGB or RGBA format.
+   */
+  isRowEmpty(pixelBuffer, rowIdx, width, channels) {
+    const rowStartOffset = rowIdx * width * channels;
+    for (let x = 0; x < width; x++) {
+      const pixelOffset = rowStartOffset + (x * channels);
+      const r = pixelBuffer[pixelOffset];
+      const g = pixelBuffer[pixelOffset + 1];
+      const b = pixelBuffer[pixelOffset + 2];
+
+      // Assuming white is RGB (255, 255, 255) or close to it.
+      // Allow for some tolerance due to anti-aliasing or compression artifacts.
+      // A common threshold for "mostly white" could be > 240 for each channel.
+      const whiteThreshold = 240; // Adjust as needed
+
+      if (r < whiteThreshold || g < whiteThreshold || b < whiteThreshold) {
+        return false; // Found a non-white pixel
+      }
+    }
+    return true; // All pixels in the row are sufficiently white
   }
 }

@@ -6,7 +6,7 @@ This project extracts vocabulary data from the official Goethe-Zertifikat B1 Wor
 
 The application processes a PDF document containing German vocabulary words with definitions and examples, extracting structured data through image processing and OCR techniques.
 
-**Note: This project has been refactored to use Node.js 22 with zero external dependencies. The original Ruby version is still available but the Node.js version is now the recommended approach.**
+**Note: This project has been refactored to use Node.js 22 with zero external *npm* dependencies (besides `sharp` for image processing). The original Ruby version is still available but the Node.js version is now the recommended approach.**
 
 ## Architecture
 
@@ -16,8 +16,8 @@ The application processes a PDF document containing German vocabulary words with
 
 ### Processing Pipeline
 1. **PDF to PNG conversion** - Extract individual pages as high-res images
-2. **Break detection** - Identify word boundaries in each column
-3. **Annotation** - Mark detected regions for verification
+2. **Break detection** - Identify word boundaries in each column (using raw pixel data from `sharp`)
+3. **Annotation** - Mark detected regions for verification (using `sharp`)
 4. **Text extraction** - OCR text from each identified region
 5. **Data processing** - Clean and format extracted text
 6. **Output generation** - Create HTML and CSV files
@@ -105,19 +105,18 @@ Both versions produce exactly **4792 vocabulary entries** across pages 16-102, e
 ### Processing Flow
 ```
 PDF → pdftocairo → PNG pages
-PNG → convert → XPM crops → detect-breaks.rb → TXT ranges
-TXT ranges → annotate.rb → annotated PNG
-TXT ranges + PDF → extract.rb → MSH data + cropped PNGs
-MSH data → generate.rb → HTML + CSV
+PNG (via sharp) → Raw Pixel Data → detect-breaks → TXT ranges
+TXT ranges + PNG (via sharp) → annotated PNG
+TXT ranges + PDF → extract.rb → JSON data + cropped PNGs
+JSON data → generate.js → HTML + CSV
 ```
 
 ## Dependencies
 
 ### Node.js Version (Recommended)
 - Node.js 22 or higher
-- ImageMagick (`convert` command) 
 - Poppler utilities (`pdftocairo`, `pdftotext`)
-- **No npm dependencies required** - uses only Node.js built-ins
+- `sharp` (npm package for image processing)
 
 ### Ruby Version (Legacy)
 - Ruby (with CSV, Marshal support)

@@ -10,8 +10,7 @@ You can read all about this in my blog post:
 
 `make`
 
-But you probably want to have `ruby`, `pdftotext`, `pdftocairo`,
-`convert` (imagemagick).
+But you probably want to have `ruby`, `pdftotext`, `pdftocairo`.
 
 ## Docker
 

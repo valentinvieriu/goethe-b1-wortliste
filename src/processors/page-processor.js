@@ -84,17 +84,14 @@ export class PageProcessor {
     } else {
       console.log(`${paddedPage}: Figuring out ranges for column ${column}...`);
       
-      // Create XPM crop for analysis 
-      const xpmPath = await this.imageProcessor.cropColumnToXPM(imagePath, pageNum, column);
+      // Get raw pixel data for analysis
+      const { data: pixelBuffer, info: pixelInfo } = await this.imageProcessor.getColumnRawPixels(imagePath, pageNum, column);
       
       // Detect breaks
-      ranges = await this.breakDetector.detectBreaks(xpmPath, pageNum, column);
+      ranges = this.breakDetector.detectBreaks(pixelBuffer, pixelInfo, pageNum, column);
       
       // Save ranges
-      await this.breakDetector.saveBreaks(ranges, rangesFile);
-      
-      // Clean up temporary XPM file
-      await this.imageProcessor.cleanup(xpmPath);
+      await fs.writeFile(rangesFile, ranges.map(r => r.join(' ')).join('\n'));
     }
 
     // Extract text from ranges
@@ -121,9 +118,6 @@ export class PageProcessor {
 
     console.log(`${paddedPage}: Creating annotation...`);
 
-    // Copy original image to annotation file
-    await fs.copyFile(imagePath, annotPath);
-
     // Create rectangles for left column
     const leftRectangles = leftRanges.map(([y0, y1]) => ({
       x0: CONFIG.LEFT_COLUMN.CROP_X,
@@ -142,7 +136,7 @@ export class PageProcessor {
 
     // Combine all rectangles and annotate in one operation
     const allRectangles = [...leftRectangles, ...rightRectangles];
-    await this.imageProcessor.annotateImage(annotPath, annotPath, allRectangles);
+    await this.imageProcessor.annotateImage(imagePath, annotPath, allRectangles);
   }
 
   async createCroppedImages(imagePath, pageNum, ranges, column) {

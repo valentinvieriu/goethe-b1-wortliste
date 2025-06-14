@@ -14,7 +14,9 @@
     "test": "node --test test/*.test.js",
     "clean": "rm -rf output/"
   },
-  "dependencies": {},
+  "dependencies": {
+    "sharp": "^0.33.2"
+  },
   "devDependencies": {},
   "keywords": ["german", "vocabulary", "goethe", "pdf", "extraction"],
   "author": "",
