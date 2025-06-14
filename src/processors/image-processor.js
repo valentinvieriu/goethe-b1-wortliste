@@ -30,15 +30,10 @@ export class ImageProcessor {
         xpmPath
       ];
 
-      console.log(`Running convert: ${['convert', ...args].join(' ')}`);
       const convert = spawn('convert', args);
 
       convert.stderr.on('data', (data) => {
         console.error(`convert crop error: ${data}`);
-      });
-
-      convert.stdout.on('data', (data) => {
-        console.log(`convert crop output: ${data}`);
       });
 
       convert.on('close', (code) => {

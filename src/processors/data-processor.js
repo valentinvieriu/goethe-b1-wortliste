@@ -154,7 +154,9 @@ export class DataProcessor {
 
   async getGitVersion() {
     return new Promise((resolve) => {
-      const git = spawn('git', ['describe', '--always', '--dirty']);
+      const git = spawn('git', ['describe', '--always', '--dirty'], {
+        timeout: 5000 // 5 second timeout
+      });
       let output = '';
       
       git.stdout.on('data', (data) => {
@@ -168,6 +170,12 @@ export class DataProcessor {
       git.on('error', () => {
         resolve('unknown');
       });
+      
+      // Fallback timeout
+      setTimeout(() => {
+        git.kill();
+        resolve('unknown');
+      }, 6000);
     });
   }
 

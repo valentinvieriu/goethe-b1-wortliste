@@ -16,19 +16,6 @@ export class BreakDetector {
     return ranges;
   }
 
-  processOverrides(overrideSet) {
-    const breaks = Array.from(overrideSet).sort((a, b) => a - b);
-    const ranges = [];
-    
-    let start = 0;
-    for (const breakPoint of breaks) {
-      ranges.push([start, breakPoint]);
-      start = breakPoint;
-    }
-    
-    return ranges;
-  }
-
   parseXMP(content, prefix) {
     const lines = content.split('\n');
     let pixels = false;
