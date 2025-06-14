@@ -4,6 +4,27 @@ This repository extracts vocabulary entries from the **Goethe-Zertifikat B1 Wort
 
 The processing pipeline uses Ruby scripts together with ImageMagick and `pdftotext`/`pdftocairo` utilities. The main entry point is `make` which calls `process-all.sh`.
 
+
+## Detailed extraction steps
+
+The workflow mirrors [the extraction blog post](https://wejn.org/2023/12/extracting-data-from-goethe-zertifikat-b1-wortliste/). It processes the PDF at **300 dpi** and assumes constant coordinates:
+
+- **Y range:** 320..3260
+- **Column 1:** x=140..540
+- **Column 2:** x=540..1200
+- **Column 3:** x=1300..1710
+- **Column 4:** x=1710..2340
+
+Running `make` performs the following:
+1. Convert pages to PNGs via `pdftocairo`.
+2. `process-page.sh` crops column groups and saves them as XPM.
+3. `detect-breaks.rb` finds long whitespace (threshold around 42 px) to define entry rectangles. Overrides handle special pages.
+4. `annotate.rb` draws red rectangles for inspection.
+5. `extract.rb` runs `pdftotext` on each rectangle, storing results in `.msh` files.
+6. `generate.rb` merges fragments, cleans formatting, and outputs page HTML/CSV or an `all` file.
+
+The overrides and cleanup rules were iteratively improved by running the scripts and checking `git diff` (diff-driven development).
+
 ## Directory structure
 
 - `process-all.sh` – processes the whole PDF. Converts the PDF to individual PNG pages (using `pdftocairo`), then iterates over the pages and calls `process-page.sh` for each page.
