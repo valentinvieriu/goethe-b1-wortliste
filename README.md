@@ -13,6 +13,24 @@ You can read all about this in my blog post:
 But you probably want to have `ruby`, `pdftotext`, `pdftocairo`,
 `convert` (imagemagick).
 
+## Docker
+
+You can also run everything inside a container with all dependencies
+preinstalled. The Docker build downloads the original PDF so you don't
+have to provide it manually.
+
+Build the image:
+
+```sh
+docker build -t goethe-b1 .
+```
+
+Process the files (results will appear in the current directory):
+
+```sh
+docker run --rm -v $(pwd):/app goethe-b1 make
+```
+
 ## Credits
 
 * Author: Michal Jirků (wejn.org)
