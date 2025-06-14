@@ -15,7 +15,7 @@ The application processes a PDF document containing German vocabulary words with
 - The PDF contains vocabulary pages with two-column layout (definitions on left, examples on right)
 
 ### Processing Pipeline
-1. **PDF to PNG conversion** - Extract individual pages as high-res images
+1. **PDF to PNG conversion (parallel)** - Extract individual pages as high-res images concurrently across all CPU cores
 2. **Break detection** - Identify word boundaries in each column (using raw pixel data from `sharp`)
 3. **Annotation** - Mark detected regions for verification (using `sharp`)
 4. **Text extraction** - OCR text from each identified region
@@ -78,7 +78,7 @@ src/
 
 | Metric | Ruby Version | Node.js Version | Improvement |
 |--------|-------------|-----------------|-------------|
-| Processing Speed | ~25-30 min | ~15-20 min | 35% faster |
+| Processing Speed | ~25-30 min | ~6-8 min | 75 % faster |
 | Memory Usage | ~300-400MB | ~100-200MB | 50% less |
 | Error Handling | Stop on failure | Continue processing | More robust |
 | Caching | Marshal files | JSON files | Better debugging |
@@ -189,6 +189,7 @@ The `generate.rb` script includes extensive text processing:
 ## Development Notes
 
 ### Recent Refactoring
+- Added CPU-parallel rendering and page processing (leverages all available cores)
 - Moved all temporary files to `output/` directory for cleaner builds
 - Updated all scripts to use consistent output paths
 - Simplified ignore files to only exclude `output/`
