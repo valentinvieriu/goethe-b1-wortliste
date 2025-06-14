@@ -2,10 +2,10 @@ FROM node:22-bookworm-slim
 
 # Install system dependencies
 # sharp's dependencies: libvips is handled by pre-built binaries, but general build tools might be needed.
-# poppler-utils and wget are still needed for pdf conversion and download.
+# wget is only required to download the source PDF during the build.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       poppler-utils wget git ca-certificates \
+       wget git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
