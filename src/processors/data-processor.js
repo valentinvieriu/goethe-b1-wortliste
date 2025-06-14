@@ -158,23 +158,32 @@ export class DataProcessor {
         timeout: 5000 // 5 second timeout
       });
       let output = '';
+      let resolved = false;
+      
+      const cleanup = (result) => {
+        if (!resolved) {
+          resolved = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          resolve(result);
+        }
+      };
       
       git.stdout.on('data', (data) => {
         output += data.toString();
       });
       
       git.on('close', () => {
-        resolve(output.trim() || 'unknown');
+        cleanup(output.trim() || 'unknown');
       });
       
       git.on('error', () => {
-        resolve('unknown');
+        cleanup('unknown');
       });
       
       // Fallback timeout
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         git.kill();
-        resolve('unknown');
+        cleanup('unknown');
       }, 6000);
     });
   }

@@ -42,14 +42,14 @@ test('applyCosmeticFixes applies multiple fixes', () => {
   assert.strictEqual(result, 'Reception, -en test');
 });
 
-test('processExtractedData merges empty definitions', async () => {
+test('processRawData merges empty definitions', () => {
   const input = [
     { definition: 'test', example: 'example 1' },
     { definition: '', example: 'example 2' },
     { definition: 'test2', example: 'example 3' }
   ];
   
-  const result = await processor.processExtractedData(input);
+  const result = processor.processRawData(input, []);
   assert.strictEqual(result.length, 2);
   assert.strictEqual(result[0].example, 'example 1\nexample 2');
   assert.strictEqual(result[1].definition, 'test2');

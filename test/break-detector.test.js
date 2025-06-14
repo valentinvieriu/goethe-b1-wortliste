@@ -4,15 +4,13 @@ import { BreakDetector } from '../src/processors/break-detector.js';
 
 const detector = new BreakDetector();
 
-test('processOverrides creates ranges from set', () => {
-  const overrideSet = new Set([100, 200, 300]);
-  const result = detector.processOverrides(overrideSet);
+test('BREAK_OVERRIDES contains expected page overrides', async () => {
+  const { BREAK_OVERRIDES } = await import('../src/config.js');
   
-  assert.deepStrictEqual(result, [
-    [0, 100],
-    [100, 200], 
-    [200, 300]
-  ]);
+  // Test that specific overrides exist
+  assert.ok(BREAK_OVERRIDES['042-l']);
+  assert.ok(BREAK_OVERRIDES['042-l'].has(2728));
+  assert.ok(BREAK_OVERRIDES['022-l'].has(118));
 });
 
 test('parseXMP handles basic XMP format', () => {
