@@ -25,7 +25,6 @@ Running `make` performs the following:
 
 The overrides and cleanup rules were iteratively improved by running the scripts and checking `git diff` (diff-driven development).
 
-
 ## Directory structure
 
 - `process-all.sh` – processes the whole PDF. Converts the PDF to individual PNG pages (using `pdftocairo`), then iterates over the pages and calls `process-page.sh` for each page.
