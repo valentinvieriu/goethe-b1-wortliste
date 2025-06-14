@@ -1,0 +1,22 @@
+{
+  "name": "goethe-b1-wortliste",
+  "version": "2.0.0",
+  "description": "Node.js refactor of Goethe B1 Wortliste extraction project",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "process:all": "node src/index.js --all",
+    "process:page": "node src/index.js --page",
+    "test": "node --test test/*.test.js",
+    "clean": "rm -rf output/"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": ["german", "vocabulary", "goethe", "pdf", "extraction"],
+  "author": "",
+  "license": "MIT"
+}

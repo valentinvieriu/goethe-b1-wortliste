@@ -6,6 +6,8 @@ This project extracts vocabulary data from the official Goethe-Zertifikat B1 Wor
 
 The application processes a PDF document containing German vocabulary words with definitions and examples, extracting structured data through image processing and OCR techniques.
 
+**Note: This project has been refactored to use Node.js 22 with zero external dependencies. The original Ruby version is still available but the Node.js version is now the recommended approach.**
+
 ## Architecture
 
 ### Input
@@ -24,7 +26,7 @@ The application processes a PDF document containing German vocabulary words with
 All generated files are placed in `output/` directory:
 - `output/Goethe-Zertifikat_B1_Wortliste-*.png` - Source page images
 - `output/[page]-[col]-*.png` - Cropped word regions
-- `output/[page]-[col].msh` - Marshaled extracted data
+- `output/[page]-[col].json` - Extracted data (Node.js) or `.msh` (Ruby)
 - `output/[page]-[col].txt` - Detected break points
 - `output/[page]-annot.png` - Annotated pages showing detection regions
 - `output/[page].html` - Individual page HTML output
@@ -32,7 +34,37 @@ All generated files are placed in `output/` directory:
 - `output/all.html` - Combined HTML for all pages
 - `output/all.csv` - Combined CSV for all pages
 
-## Key Scripts
+## Usage (Node.js Version - Recommended)
+
+### Main Commands
+- `npm run process:all` - Process all pages (016-102)
+- `npm run process:page 42` - Process single page
+- `npm test` - Run test suite
+- `npm run clean` - Clean output directory
+
+### Direct Node.js Usage
+```bash
+node src/index.js --all              # Process all pages
+node src/index.js --page 42          # Process single page
+node src/index.js --help             # Show usage help
+```
+
+### Node.js Architecture
+```
+src/
+├── index.js                 # Main CLI entry point
+├── config.js               # Configuration and constants
+├── utils/fs.js             # File system utilities
+└── processors/
+    ├── pdf-converter.js    # PDF to PNG conversion
+    ├── image-processor.js  # Image cropping and annotation
+    ├── break-detector.js   # Text boundary detection
+    ├── text-extractor.js   # OCR text extraction
+    ├── data-processor.js   # Text cleaning and output generation
+    └── page-processor.js   # Page-level orchestration
+```
+
+## Legacy Ruby Scripts (Still Available)
 
 ### Main Entry Points
 - `make` or `./process-all.sh` - Process all pages (016-102)
@@ -58,16 +90,30 @@ MSH data → generate.rb → HTML + CSV
 
 ## Dependencies
 
-### System Requirements
+### Node.js Version (Recommended)
+- Node.js 22 or higher
+- ImageMagick (`convert` command) 
+- Poppler utilities (`pdftocairo`, `pdftotext`)
+- **No npm dependencies required** - uses only Node.js built-ins
+
+### Ruby Version (Legacy)
 - Ruby (with CSV, Marshal support)
 - ImageMagick (`convert` command)
 - Poppler utilities (`pdftocairo`, `pdftotext`)
 
 ### Docker Usage
 The project includes a Dockerfile for consistent builds:
+
+**Node.js version (default):**
 ```bash
 docker build -t goethe-b1 .
-docker run --rm -v $(pwd):/app goethe-b1 make
+docker run --rm -v $(pwd):/app goethe-b1
+```
+
+**Override for specific commands:**
+```bash
+docker run --rm -v $(pwd):/app goethe-b1 npm run process:page 42
+docker run --rm -v $(pwd):/app goethe-b1 npm test
 ```
 
 ## Text Processing Features
@@ -132,6 +178,35 @@ The `generate.rb` script includes extensive text processing:
 
 ## Usage Examples
 
+### Node.js Version
+
+Process everything:
+```bash
+npm run process:all
+# or with Docker
+docker run --rm -v $(pwd):/app goethe-b1
+```
+
+Process single page:
+```bash
+npm run process:page 42
+# or
+node src/index.js --page 42
+```
+
+Run tests:
+```bash
+npm test
+```
+
+Clean and rebuild:
+```bash
+npm run clean
+npm run process:all
+```
+
+### Ruby Version (Legacy)
+
 Process everything:
 ```bash
 make
@@ -148,10 +223,4 @@ ruby generate.rb 042
 Generate combined output:
 ```bash
 ruby generate.rb all
-```
-
-Clean and rebuild:
-```bash
-rm -rf output/
-make
 ```
