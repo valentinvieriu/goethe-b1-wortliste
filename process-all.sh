@@ -8,9 +8,12 @@ if test ! -f Goethe-Zertifikat_B1_Wortliste.pdf; then
   exit 1
 fi
 
-if test ! -f Goethe-Zertifikat_B1_Wortliste-104.png; then
+# Ensure output directory exists
+mkdir -p output
+
+if test ! -f output/Goethe-Zertifikat_B1_Wortliste-104.png; then
   echo "Extracting PNGs..."
-  pdftocairo -png -r 300 Goethe-Zertifikat_B1_Wortliste.pdf
+  pdftocairo -png -r 300 Goethe-Zertifikat_B1_Wortliste.pdf output/Goethe-Zertifikat_B1_Wortliste
 fi
 
 echo "Processing pages..."

@@ -3,7 +3,7 @@ FROM debian:bookworm-slim
 # Install dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ruby imagemagick poppler-utils make wget \
+       ruby imagemagick poppler-utils make wget git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

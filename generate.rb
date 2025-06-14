@@ -1,14 +1,23 @@
 #!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+# Force UTF-8 encoding
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
 
 require 'csv'
 require 'pp'
 
 def process(input, buf)
   input.each do |(i, d, e)|
+    # Force UTF-8 encoding on strings
+    d = d.force_encoding('UTF-8') if d.respond_to?(:force_encoding)
+    e = e.force_encoding('UTF-8') if e.respond_to?(:force_encoding)
+    
     if d == "" && buf[-1]
       p = buf[-1]
       p[0] = [p[0], i].flatten
-      p[2] = p[2] + "\n" + e
+      p[2] = p[2].force_encoding('UTF-8') + "\n" + e
     else
       buf << [i, d, e]
     end
@@ -19,13 +28,17 @@ end
 page = ARGV.first
 input_data = []
 Array(page == "all" ? ("016".."102") : page).each do |pn|
-  process(Marshal.load(File.read(pn + "-l.msh")), input_data)
-  process(Marshal.load(File.read(pn + "-r.msh")), input_data)
+  process(Marshal.load(File.read("output/#{pn}-l.msh")), input_data)
+  process(Marshal.load(File.read("output/#{pn}-r.msh")), input_data)
 end
 
 csv_data = []
 html_data = []
 for img, d, e in input_data
+  # Force UTF-8 encoding on strings
+  d = d.force_encoding('UTF-8') if d.respond_to?(:force_encoding)
+  e = e.force_encoding('UTF-8') if e.respond_to?(:force_encoding)
+  
   # fix p. 39-r
   e = e.sub(/1 Auf dem Brief fehlt der Absender/, "1. Auf dem Brief fehlt der Absender")
 
@@ -129,7 +142,7 @@ end
 git_version = `git describe --always --dirty`.strip
 generated_at = Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")
 
-File.open("#{page}.html", "w") do |html|
+File.open("output/#{page}.html", "w") do |html|
   html.puts '<!DOCTYPE html>'
   html.puts '<html lang="de">'
   html.puts "<head>"
@@ -199,7 +212,9 @@ using this in any commercial capacity.
   html.puts "</html>"
 end
 
-File.open("#{page}.csv", "w") do |c|
+File.open("output/#{page}.csv", "w") do |c|
   c.write("Goethe Zertifikat B1 Wortliste,Version #{git_version} -- generated at #{generated_at}\n")
-  c.write(CSV.generate_lines(csv_data))
+  csv_data.each do |row|
+    c.write(CSV.generate_line(row))
+  end
 end

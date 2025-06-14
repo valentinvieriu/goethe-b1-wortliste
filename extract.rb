@@ -1,4 +1,9 @@
 #!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+# Force UTF-8 encoding
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
 
 if ARGV.size != 8
   STDERR.puts "Usage: #{File.basename($0)} <pdf> <page> <yranges> <x0> <x1> <x2> <y> <col>"
@@ -14,7 +19,10 @@ end
 x0, x1, x2, y = ARGV[3,4].map(&:to_i)
 col = ARGV[7]
 
-outfile = "#{page}-#{col}.msh"
+# Ensure output directory exists
+Dir.mkdir("output") unless Dir.exist?("output")
+
+outfile = "output/#{page}-#{col}.msh"
 
 exit 0 if FileTest.file?(outfile)
 
@@ -22,20 +30,20 @@ out = []
 
 coords.each_with_index do |(y0, y1), idx|
   i, l, r = nil
-  i = "#{page}-#{col}-#{idx}.png"
+  i = "output/#{page}-#{col}-#{idx}.png"
   unless FileTest.file?(i)
-    system(*["convert", "Goethe-Zertifikat_B1_Wortliste-#{page}.png",
+    system(*["convert", "output/Goethe-Zertifikat_B1_Wortliste-#{page}.png",
 	     "-crop", "#{x2-x0}x#{y1-y0}+#{x0}+#{y+y0}", "+repage", i])
   end
   IO.popen(["pdftotext", "-f", page, "-l", page, "-r", 300,
 	    "-x", x0, "-y", y+y0, "-W", x1-x0, "-H", y1-y0,
 	    pdf, "-"].map(&:to_s), 'r') do |f|
-    l = f.read.strip
+    l = f.read.strip.force_encoding('UTF-8')
   end
   IO.popen(["pdftotext", "-f", page, "-l", page, "-r", 300,
 	    "-x", x1, "-y", y+y0, "-W", x2-x1, "-H", y1-y0,
 	    pdf, "-"].map(&:to_s), 'r') do |f|
-    r = f.read.strip
+    r = f.read.strip.force_encoding('UTF-8')
   end
 
   # Fix up broken left column of page 079, sigh
