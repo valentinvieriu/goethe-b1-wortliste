@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { promises as fs } from 'fs';
+import { cpus } from 'os';
 import { CONFIG } from './config.js';
 import { PDFConverter } from './processors/pdf-converter.js';
 import { PageProcessor } from './processors/page-processor.js';
@@ -14,10 +15,37 @@ class GoetheBrListProcessor {
     this.dataProcessor = new DataProcessor();
   }
 
-  async processAll() {
-    console.log('Starting Goethe B1 Wortliste processing...');
+  /**
+   * Execute an async iterator over an array of items while keeping at most
+   * `limit` promises running concurrently.
+   *
+   * @template T
+   * @param {T[]} items              Items to iterate over
+   * @param {number} limit           Maximum concurrent executions
+   * @param {(item:T)=>Promise<void>} iteratorFn  Work to perform per item
+   */
+  async runWithConcurrency(items, limit, iteratorFn) {
+    const executing = [];
+    for (const item of items) {
+      const p = Promise.resolve().then(() => iteratorFn(item));
+      const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+      executing.push(e);
 
-    // Check if PDF exists
+      if (executing.length >= limit) {
+        await Promise.race(executing);
+      }
+    }
+    await Promise.all(executing);
+  }
+
+  /**
+   * Process the whole Wortliste (pages 16 – 102) in parallel.
+   * Concurrency is capped at the number of detected CPU cores.
+   */
+  async processAll() {
+    console.log('Starting Goethe B1 Wortliste processing…');
+
+    // Check PDF presence
     if (!(await fileExists(CONFIG.PDF_FILE))) {
       console.error(`PDF file not found: ${CONFIG.PDF_FILE}`);
       console.error('Get yourself Goethe-Zertifikat_B1_Wortliste.pdf');
@@ -28,38 +56,41 @@ class GoetheBrListProcessor {
     // Ensure output directory exists
     await fs.mkdir(CONFIG.OUTPUT_DIR, { recursive: true });
 
-    // Convert PDF to PNG if needed
+    // Render PNGs if necessary
     await this.pdfConverter.convertPDFToPNG();
 
-    // Process all pages
-    console.log('Processing pages...');
+    const cpuCount = Math.max(1, cpus().length);
+    console.log(`Processing pages in parallel (concurrency = ${cpuCount})…`);
+
+    const pageNumbers = [];
+    for (let p = CONFIG.PAGE_START; p <= CONFIG.PAGE_END; p++) pageNumbers.push(p);
+
     let allRawData = [];
-    
-    for (let pageNum = CONFIG.PAGE_START; pageNum <= CONFIG.PAGE_END; pageNum++) {
+
+    await this.runWithConcurrency(pageNumbers, cpuCount, async (pageNum) => {
       try {
         await this.pageProcessor.processPage(pageNum);
-        
-        // Collect raw data for combined output
+
+        // Aggregate raw data for the combined HTML/CSV
         const paddedPage = pageNum.toString().padStart(3, '0');
-        const leftFile = `${CONFIG.OUTPUT_DIR}/${paddedPage}-l.json`;
+        const leftFile  = `${CONFIG.OUTPUT_DIR}/${paddedPage}-l.json`;
         const rightFile = `${CONFIG.OUTPUT_DIR}/${paddedPage}-r.json`;
-        
+
         if (await fileExists(leftFile)) {
           const leftData = JSON.parse(await fs.readFile(leftFile, 'utf8'));
           allRawData = this.dataProcessor.processRawData(leftData, allRawData);
         }
-        
         if (await fileExists(rightFile)) {
           const rightData = JSON.parse(await fs.readFile(rightFile, 'utf8'));
           allRawData = this.dataProcessor.processRawData(rightData, allRawData);
         }
-      } catch (error) {
-        console.error(`Error processing page ${pageNum}:`, error.message);
+      } catch (err) {
+        console.error(`Error processing page ${pageNum}:`, err.message);
       }
-    }
+    });
 
-    // Generate final combined files
-    console.log('Generating final combined files...');
+    // Produce combined output
+    console.log('Generating final combined files…');
     await this.generateCombinedOutputs(allRawData);
 
     console.log('Processing completed successfully!');
@@ -68,36 +99,31 @@ class GoetheBrListProcessor {
   async processPage(pageNum) {
     console.log(`Processing single page: ${pageNum}`);
 
-    // Check if PDF exists
     if (!(await fileExists(CONFIG.PDF_FILE))) {
       console.error(`PDF file not found: ${CONFIG.PDF_FILE}`);
       process.exit(1);
     }
 
-    // Ensure output directory exists
     await fs.mkdir(CONFIG.OUTPUT_DIR, { recursive: true });
-
-    // Convert PDF to PNG if needed
     await this.pdfConverter.convertPDFToPNG();
 
-    // Process the specific page
     try {
       await this.pageProcessor.processPage(pageNum);
       console.log(`Page ${pageNum} processed successfully!`);
-    } catch (error) {
-      console.error(`Error processing page ${pageNum}:`, error.message);
+    } catch (err) {
+      console.error(`Error processing page ${pageNum}:`, err.message);
       process.exit(1);
     }
   }
 
   async generateCombinedOutputs(allData) {
     const processedData = await this.dataProcessor.processExtractedData(allData);
-    
+
     const html = await this.dataProcessor.generateHTML(processedData, 'all');
-    const csv = await this.dataProcessor.generateCSV(processedData, 'all');
+    const csv  = await this.dataProcessor.generateCSV(processedData, 'all');
 
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.html`, html);
-    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv);
+    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`,  csv);
   }
 
   showUsage() {
@@ -129,13 +155,12 @@ async function main() {
     await processor.processAll();
   } else if (args.includes('--page')) {
     const pageIndex = args.indexOf('--page');
-    const pageNum = parseInt(args[pageIndex + 1]);
-    
+    const pageNum   = parseInt(args[pageIndex + 1], 10);
+
     if (!pageNum || pageNum < CONFIG.PAGE_START || pageNum > CONFIG.PAGE_END) {
       console.error(`Invalid page number. Must be between ${CONFIG.PAGE_START} and ${CONFIG.PAGE_END}`);
       process.exit(1);
     }
-    
     await processor.processPage(pageNum);
   } else {
     console.error('Invalid arguments. Use --help for usage information.');
@@ -144,11 +169,10 @@ async function main() {
   }
 }
 
-// Handle errors gracefully
-process.on('unhandledRejection', (error) => {
-  console.error('Unhandled error:', error);
+// Global unhandled-rejection guard
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled error:', err);
   process.exit(1);
 });
 
-// Run main function
 main().catch(console.error);
