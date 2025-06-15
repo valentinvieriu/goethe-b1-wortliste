@@ -1,8 +1,18 @@
 import * as mupdf from 'mupdf'
 import { promises as fs } from 'fs'
 import { cpus } from 'os'
+import path from 'path'
 import { CONFIG } from '../config.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
+
+/**
+ * Generate PNG filename based on PDF filename
+ */
+function generatePngFilename(pageNum) {
+  const baseName = path.basename(CONFIG.PDF_FILE, '.pdf')
+  const paddedPage = padPageNumber(pageNum)
+  return `${baseName}-${paddedPage}.png`
+}
 
 /**
  * PDFConverter
@@ -58,7 +68,7 @@ export class PDFConverter {
     await fs.mkdir(this.outputDir, { recursive: true })
 
     // Sentinel: if the very last expected PNG exists, assume all pages done
-    const sentinel = `${this.outputDir}/Goethe-Zertifikat_B1_Wortliste-${padPageNumber(CONFIG.PAGE_END)}.png`
+    const sentinel = `${this.outputDir}/${generatePngFilename(CONFIG.PAGE_END)}`
     if (await fileExists(sentinel)) {
       console.log('PNG files already exist, skipping conversion')
       return
@@ -76,7 +86,7 @@ export class PDFConverter {
       const oneBased = zeroBased + 1
       if (oneBased < CONFIG.PAGE_START || oneBased > CONFIG.PAGE_END) continue
       const padded = padPageNumber(oneBased)
-      const outPath = `${this.outputDir}/Goethe-Zertifikat_B1_Wortliste-${padded}.png`
+      const outPath = `${this.outputDir}/${generatePngFilename(oneBased)}`
       if (await fileExists(outPath)) continue
       todo.push(oneBased)
     }
@@ -85,7 +95,7 @@ export class PDFConverter {
 
     await this._runWithConcurrency(todo, concurrency, async oneBased => {
       const padded = padPageNumber(oneBased)
-      const outPath = `${this.outputDir}/Goethe-Zertifikat_B1_Wortliste-${padded}.png`
+      const outPath = `${this.outputDir}/${generatePngFilename(oneBased)}`
 
       // Double-check in case another worker already rendered it
       if (await fileExists(outPath)) return
@@ -102,7 +112,7 @@ export class PDFConverter {
   /** Path helper (unchanged) */
   async getPageImagePath(pageNum) {
     const paddedPage = padPageNumber(pageNum)
-    const imagePath = `${this.outputDir}/Goethe-Zertifikat_B1_Wortliste-${paddedPage}.png`
+    const imagePath = `${this.outputDir}/${generatePngFilename(pageNum)}`
 
     if (!(await fileExists(imagePath))) {
       throw new Error(`Page image not found: ${imagePath}`)

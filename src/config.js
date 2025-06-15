@@ -1,6 +1,22 @@
+// Load environment variables
+function getEnvVar(name, defaultValue = '') {
+  return process.env[name] || defaultValue
+}
+
+function getEnvBool(name, defaultValue = false) {
+  const value = process.env[name]
+  if (value === undefined) return defaultValue
+  return value.toLowerCase() === 'true'
+}
+
 export const CONFIG = {
+  // Environment variables
+  DEBUG: getEnvBool('DEBUG', false),
+  PDF_URL: getEnvVar('PDF_URL', 'https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf'),
+  PDF_URL_FALLBACK: getEnvVar('PDF_URL_FALLBACK', 'https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf'),
+
   // PDF processing
-  PDF_FILE: 'Goethe-Zertifikat_B1_Wortliste.pdf',
+  PDF_FILE: getEnvVar('PDF_FILENAME', 'Goethe-Zertifikat_B1_Wortliste.pdf'),
   PDF_DPI: 300,
   PAGE_START: 16,
   PAGE_END: 102,

@@ -47,7 +47,7 @@ export class GoetheBrListProcessor {
 
     // Check if PDF exists
     if (!(await fileExists(CONFIG.PDF_FILE))) {
-      const message = `PDF file not found: ${CONFIG.PDF_FILE}\nGet yourself Goethe-Zertifikat_B1_Wortliste.pdf\nIt used to live at https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf`
+      const message = `PDF file not found: ${CONFIG.PDF_FILE}\nGet yourself ${CONFIG.PDF_FILE}\nIt can be downloaded from: ${CONFIG.PDF_URL}\nFallback URL: ${CONFIG.PDF_URL_FALLBACK}`
       throw new Error(message)
     }
 

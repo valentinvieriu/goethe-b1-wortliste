@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import { spawn } from 'child_process'
+import { CONFIG } from '../config.js'
 
 export class DataProcessor {
   constructor() {}
@@ -230,7 +231,7 @@ export class DataProcessor {
 <p>Version ${gitVersion} -- generated at ${generatedAt}</p>
 <p>
 All of this text is extracted from
-<a href="https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf">Goethe-Zertifikat_B1_Wortliste.pdf</a>
+<a href="${CONFIG.PDF_URL}">${CONFIG.PDF_FILE}</a>
 (© 2016 Goethe-Institut und ÖSD)
 because their PDF was unusable for making flashcards.
 </p>

@@ -21,11 +21,16 @@ RUN npm ci --only=production
 COPY src/ ./src/
 COPY test/ ./test/
 
-# Download the source PDF during build
-RUN wget --no-check-certificate -O Goethe-Zertifikat_B1_Wortliste.pdf \
-    https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf || \
-    wget -O Goethe-Zertifikat_B1_Wortliste.pdf \
-    https://web.archive.org/web/20231201000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf
+# Set default environment variables for PDF download
+ENV PDF_FILENAME=Goethe-Zertifikat_B1_Wortliste.pdf
+ENV PDF_URL=https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf
+ENV PDF_URL_FALLBACK=https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf
+
+# Download the source PDF during build using environment variables
+RUN wget --no-check-certificate -O "${PDF_FILENAME}" \
+    "${PDF_URL}" || \
+    wget -O "${PDF_FILENAME}" \
+    "${PDF_URL_FALLBACK}"
 
 # Create output directory
 RUN mkdir -p output
