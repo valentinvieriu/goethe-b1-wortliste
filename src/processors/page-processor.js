@@ -7,9 +7,16 @@ import { TextExtractor } from './text-extractor.js'
 import { DataProcessor } from './data-processor.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
 
+/**
+ * @class PageProcessor
+ * @description Orchestrates the entire processing pipeline for a single page of the PDF.
+ * It coordinates the conversion, break detection, text extraction, data processing,
+ * and final output generation for one page at a time. It also manages caching of
+ * intermediate results to speed up reprocessing.
+ */
 export class PageProcessor {
   /**
-   * Processor orchestrating all steps for a single PDF page.
+   * Initializes all necessary processor modules.
    */
   constructor() {
     this.pdfConverter = new PDFConverter()
@@ -21,10 +28,11 @@ export class PageProcessor {
   }
 
   /**
-   * Process an individual page of the PDF from image extraction to CSV.
+   * Processes a single page of the PDF, from image conversion to final CSV output.
+   * This is the main entry point for page-level processing.
    *
-   * @param {number} pageNum - 1-based page number.
-   * @returns {Promise<Array<{definition:string,example:string}>>} Processed entries.
+   * @param {number} pageNum - The 1-based page number to process.
+   * @returns {Promise<Array<{definition: string, example: string}>>} A promise that resolves to an array of processed vocabulary entries for the page.
    */
   async processPage(pageNum) {
     const paddedPage = padPageNumber(pageNum)
@@ -63,12 +71,14 @@ export class PageProcessor {
   }
 
   /**
-   * Process a single column of a page: detect breaks, extract text and images.
+   * Processes a single column ('l' or 'r') of a page. This involves detecting
+   * content breaks, extracting text from those breaks, and generating cropped images.
+   * It caches results in the output directory to avoid re-doing work.
    *
-   * @param {string} imagePath - PNG path for the whole page.
-   * @param {number} pageNum - Page number being processed.
-   * @param {'l'|'r'} column - Column identifier.
-   * @returns {Promise<{data:Array, ranges:Array}>} Extracted data and ranges.
+   * @param {string} imagePath - The file path to the full-page PNG image.
+   * @param {number} pageNum - The page number being processed.
+   * @param {'l'|'r'} column - The column identifier ('l' for left, 'r' for right).
+   * @returns {Promise<{data: Array<object>, ranges: Array<[number, number]>}>} A promise resolving to the extracted data and the detected break ranges.
    */
   async processColumn(imagePath, pageNum, column) {
     const paddedPage = padPageNumber(pageNum)
@@ -139,13 +149,14 @@ export class PageProcessor {
   }
 
   /**
-   * Generate a single annotated image showing break ranges for both columns.
+   * Generates a single annotated image for a page, showing the detected break
+   * ranges for both columns as semi-transparent overlays. Skips if the file already exists.
    *
    * @param {string} imagePath - Path to the original page PNG.
    * @param {number} pageNum - Current page number.
-   * @param {Array<Array<number>>} leftRanges - Break ranges for the left column.
-   * @param {Array<Array<number>>} rightRanges - Break ranges for the right column.
-   * @returns {Promise<void>} Resolves when the annotation is written.
+   * @param {Array<[number, number]>} leftRanges - Break ranges for the left column.
+   * @param {Array<[number, number]>} rightRanges - Break ranges for the right column.
+   * @returns {Promise<void>} A promise that resolves when the annotation is written.
    */
   async createCombinedAnnotation(imagePath, pageNum, leftRanges, rightRanges) {
     const paddedPage = padPageNumber(pageNum)
@@ -180,13 +191,14 @@ export class PageProcessor {
   }
 
   /**
-   * Produce cropped PNG snippets for each detected region.
+   * Produces cropped PNG snippets for each detected vocabulary entry region in a column.
+   * Skips any images that already exist.
    *
-   * @param {string} imagePath - Original page image.
-   * @param {number} pageNum - Page number.
-   * @param {Array<Array<number>>} ranges - Break ranges of the column.
-   * @param {'l'|'r'} column - Column identifier.
-   * @returns {Promise<void>} Resolves when all crops are written.
+   * @param {string} imagePath - The file path to the original full-page image.
+   * @param {number} pageNum - The current page number.
+   * @param {Array<[number, number]>} ranges - The array of [y0, y1] break ranges for the column.
+   * @param {'l'|'r'} column - The column identifier.
+   * @returns {Promise<void>} A promise that resolves when all crop operations are complete.
    */
   async createCroppedImages(imagePath, pageNum, ranges, column) {
     const paddedPage = padPageNumber(pageNum)
@@ -218,11 +230,12 @@ export class PageProcessor {
   }
 
   /**
-   * Write CSV output files for a page.
+   * Writes the final CSV output file for a given page's processed data.
+   * Skips if the output file already exists.
    *
-   * @param {Array} data - Processed entries for the page.
-   * @param {string} page - Page identifier used for filenames.
-   * @returns {Promise<void>} Resolves when files are written.
+   * @param {Array<{definition: string, example: string}>} data - The processed vocabulary entries for the page.
+   * @param {string} page - The page identifier string (e.g., "042") used for the filename.
+   * @returns {Promise<void>} A promise that resolves when the file has been written.
    */
   async generateOutputs(data, page) {
     const csvFile = `${this.outputDir}/${page}.csv`

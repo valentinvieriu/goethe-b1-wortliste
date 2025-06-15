@@ -6,10 +6,9 @@ import { CONFIG } from '../config.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
 
 /**
- * Generate the PNG filename for a given page number.
- *
- * @param {number} pageNum - Page number (1-based).
- * @returns {string} Corresponding PNG file name.
+ * Generates the PNG filename for a given page number.
+ * @param {number} pageNum - The 1-based page number.
+ * @returns {string} The corresponding PNG filename (e.g., "Goethe-Zertifikat_B1_Wortliste-042.png").
  */
 function generatePngFilename(pageNum) {
   const baseName = path.basename(CONFIG.PDF_FILE, '.pdf')
@@ -18,16 +17,15 @@ function generatePngFilename(pageNum) {
 }
 
 /**
- * PDFConverter
- * ------------
- * Converts the Goethe B1 Wortliste PDF pages to individual PNG images
- * using MuPDF.js (WASM).  Rendering now happens in parallel across
- * the available CPU cores for a significant speed-up on multicore hosts.
+ * @class PDFConverter
+ * @description Converts pages from the source PDF file into high-resolution PNG images.
+ * It uses the `mupdf` library for rendering and performs conversions in parallel,
+ * utilizing all available CPU cores to maximize speed.
  */
 export class PDFConverter {
   /**
-   * Create a new PDFConverter instance.
-   * Stores configuration values and lazily loads the PDF document.
+   * Creates a new PDFConverter instance.
+   * It stores configuration values and prepares for lazy-loading of the PDF document.
    */
   constructor() {
     this.pdfFile = CONFIG.PDF_FILE
@@ -36,9 +34,10 @@ export class PDFConverter {
   }
 
   /**
-   * Lazily open the PDF document so it is loaded only once.
-   *
-   * @returns {Promise<mupdf.PDFDocument>} The opened MuPDF document.
+   * Lazily opens the PDF document using MuPDF.js, caching the document
+   * instance so it is only loaded and parsed once.
+   * @private
+   * @returns {Promise<mupdf.PDFDocument>} A promise that resolves to the opened MuPDF document instance.
    */
   async _getDocument() {
     if (this._doc) return this._doc
@@ -48,11 +47,14 @@ export class PDFConverter {
   }
 
   /**
-   * Generic bounded-concurrency runner.
+   * A generic utility to run an async iterator function over a list of items
+   * with a specified concurrency limit.
+   * @private
    * @template T
-   * @param {T[]} items
-   * @param {number} limit
-   * @param {(item:T)=>Promise<void>} iteratorFn
+   * @param {T[]} items - An array of items to iterate over.
+   * @param {number} limit - The maximum number of async operations to run in parallel.
+   * @param {(item: T) => Promise<any>} iteratorFn - The async function to execute for each item.
+   * @returns {Promise<void>} A promise that resolves when all items have been processed.
    */
   async _runWithConcurrency(items, limit, iteratorFn) {
     const executing = []
@@ -68,8 +70,10 @@ export class PDFConverter {
   }
 
   /**
-   * Render required pages as PNG files (300 DPI by default) in parallel.
-   * Concurrency defaults to the number of available CPU cores.
+   * Renders the required pages from the PDF into PNG files at the configured DPI.
+   * The conversion runs in parallel, with concurrency limited by the number of CPU cores.
+   * It skips pages that have already been rendered.
+   * @returns {Promise<void>} A promise that resolves when all conversions are complete.
    */
   async convertPDFToPNG() {
     if (!(await fileExists(this.pdfFile))) {
@@ -121,10 +125,11 @@ export class PDFConverter {
   }
 
   /**
-   * Build the path to a previously rendered PNG page image.
+   * Constructs the file path for a previously rendered PNG page image and verifies its existence.
    *
-   * @param {number} pageNum - Page number (1-based).
-   * @returns {Promise<string>} Absolute path to the PNG image.
+   * @param {number} pageNum - The 1-based page number.
+   * @returns {Promise<string>} A promise that resolves to the full path of the PNG image.
+   * @throws {Error} If the image file for the specified page does not exist.
    */
   async getPageImagePath(pageNum) {
     const paddedPage = padPageNumber(pageNum)

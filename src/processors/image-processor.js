@@ -3,21 +3,28 @@ import { promises as fs } from 'fs'
 import { CONFIG } from '../config.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
 
+/**
+ * @class ImageProcessor
+ * @description A utility class that wraps the 'sharp' library to perform
+ * all image manipulation tasks, such as cropping, extracting pixel data,
+ * and annotating images with overlayed regions.
+ */
 export class ImageProcessor {
   /**
-   * Utility for cropping and annotating page images.
+   * Creates an instance of ImageProcessor.
    */
   constructor() {
     this.outputDir = CONFIG.OUTPUT_DIR
   }
 
   /**
-   * Extract raw pixel data for a column on the page.
+   * Extracts raw pixel data for a specified column from a page image.
+   * The column's dimensions are determined by the application configuration.
    *
-   * @param {string} imagePath - Path to the page image.
-   * @param {number} pageNum - Page number for error reporting.
-   * @param {'l'|'r'} column - Column identifier.
-   * @returns {Promise<{data:Buffer,info:import('sharp').OutputInfo}>} Raw pixel info.
+   * @param {string} imagePath - The file path to the source page image (PNG).
+   * @param {number} pageNum - The page number, used for logging and context.
+   * @param {'l'|'r'} column - The column identifier ('l' for left, 'r' for right).
+   * @returns {Promise<{data: Buffer, info: import('sharp').OutputInfo}>} A promise that resolves to an object containing the raw pixel data buffer and sharp's metadata info.
    */
   async getColumnRawPixels(imagePath, pageNum, column) {
     const paddedPage = padPageNumber(pageNum)
@@ -46,15 +53,15 @@ export class ImageProcessor {
   }
 
   /**
-   * Crop a rectangular region from an image and save it to disk.
+   * Crops a rectangular region from an image and saves it to a new file.
    *
-   * @param {string} imagePath - Source image.
-   * @param {number} x - X offset.
-   * @param {number} y - Y offset.
-   * @param {number} width - Width of crop.
-   * @param {number} height - Height of crop.
-   * @param {string} outputPath - Destination PNG path.
-   * @returns {Promise<string>} Path of the written file.
+   * @param {string} imagePath - The file path to the source image.
+   * @param {number} x - The horizontal offset for the top-left corner of the crop region.
+   * @param {number} y - The vertical offset for the top-left corner of the crop region.
+   * @param {number} width - The width of the crop region.
+   * @param {number} height - The height of the crop region.
+   * @param {string} outputPath - The file path where the cropped PNG image will be saved.
+   * @returns {Promise<string>} A promise that resolves to the output path of the written file.
    */
   async cropRegion(imagePath, x, y, width, height, outputPath) {
     try {
@@ -68,12 +75,13 @@ export class ImageProcessor {
   }
 
   /**
-   * Overlay semi-transparent rectangles on an image to highlight regions.
+   * Overlays semi-transparent rectangles on an image to highlight specified regions,
+   * such as detected vocabulary blocks. Writes the result to a new file.
    *
-   * @param {string} imagePath - Source image path.
-   * @param {string} outputPath - Destination file for the annotated image.
-   * @param {Array<{x0:number,y0:number,x1:number,y1:number}>} rectangles - Areas to highlight.
-   * @returns {Promise<string>} Path to the annotated image.
+   * @param {string} imagePath - The file path to the source image.
+   * @param {string} outputPath - The destination file path for the annotated image.
+   * @param {Array<{x0: number, y0: number, x1: number, y1: number}>} rectangles - An array of rectangle coordinates to draw.
+   * @returns {Promise<string>} A promise that resolves to the path of the annotated image.
    */
   async annotateImage(imagePath, outputPath, rectangles) {
     try {
@@ -121,10 +129,11 @@ export class ImageProcessor {
   }
 
   /**
-   * Remove a temporary file if it exists.
+   * Removes a temporary file if it exists, ignoring any errors
+   * if the file is already gone.
    *
-   * @param {string} filePath - File to delete.
-   * @returns {Promise<void>} Resolves when deletion attempted.
+   * @param {string} filePath - The path to the file to delete.
+   * @returns {Promise<void>} A promise that resolves once the unlink operation is attempted.
    */
   async cleanup(filePath) {
     try {

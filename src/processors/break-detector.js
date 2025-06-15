@@ -2,6 +2,11 @@ import { promises as fs } from 'fs'
 import { BREAK_OVERRIDES, CONFIG } from '../config.js'
 import { padPageNumber } from '../utils/fs.js'
 
+/**
+ * @class BreakDetector
+ * @description Detects vertical breaks between vocabulary entries in a column of a page image.
+ * It analyzes raw pixel data to find contiguous rows of white space that signify a separation.
+ */
 export class BreakDetector {
   /**
    * Create a new break detector using configured threshold value.
@@ -11,12 +16,14 @@ export class BreakDetector {
   }
 
   /**
-   * Detects breaks in a column's raw pixel data.
+   * Detects breaks in a column's raw pixel data using a finite state machine.
+   * It identifies regions of content separated by vertical white space.
+   *
    * @param {Buffer} pixelBuffer - Raw pixel data buffer from sharp.
-   * @param {Object} info - Metadata from sharp ({ width, height, channels }).
-   * @param {number} pageNum - The page number.
-   * @param {string} column - The column ('l' or 'r').
-   * @returns {Array<Array<number>>} An array of [startY, endY] ranges.
+   * @param {import('sharp').Raw} info - Metadata from sharp ({ width, height, channels }).
+   * @param {number} pageNum - The page number, used for logging and overrides.
+   * @param {'l'|'r'} column - The column identifier ('l' for left, 'r' for right).
+   * @returns {Array<[number, number]>} An array of [startY, endY] ranges representing detected content blocks.
    */
   detectBreaks(pixelBuffer, info, pageNum, column) {
     const paddedPage = padPageNumber(pageNum)
@@ -82,13 +89,15 @@ export class BreakDetector {
 
   /**
    * Checks if a row of pixels is predominantly "white" (empty).
+   * A row is considered empty if all its pixels are lighter than a given threshold,
+   * which allows for slight variations from pure white due to JPEG artifacts or anti-aliasing.
    * Assumes RGB or RGBA format.
    *
-   * @param {Buffer} pixelBuffer - The raw pixel buffer.
-   * @param {number} rowIdx - Index of the row to check.
+   * @param {Buffer} pixelBuffer - The raw pixel buffer for the entire column image.
+   * @param {number} rowIdx - The y-coordinate (index) of the row to check.
    * @param {number} width - Width of the image in pixels.
-   * @param {number} channels - Number of color channels.
-   * @returns {boolean} True if the row is mostly white.
+   * @param {number} channels - Number of color channels (e.g., 3 for RGB, 4 for RGBA).
+   * @returns {boolean} `true` if the row is considered empty, `false` otherwise.
    */
   isRowEmpty(pixelBuffer, rowIdx, width, channels) {
     const rowStartOffset = rowIdx * width * channels

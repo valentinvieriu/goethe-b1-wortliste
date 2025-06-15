@@ -2,6 +2,11 @@ import { promises as fs } from 'fs'
 import { spawn } from 'child_process'
 import { CONFIG } from '../config.js'
 
+/**
+ * @class DataProcessor
+ * @description Handles the cleaning, normalization, and formatting of extracted vocabulary data.
+ * This includes merging multi-line entries, applying text-based fixes, and generating final CSV output.
+ */
 export class DataProcessor {
   /**
    * Simple wrapper for processing raw and extracted data.
@@ -9,12 +14,13 @@ export class DataProcessor {
   constructor() {}
 
   /**
-   * Merge raw OCR entries into a buffer, combining examples that
-   * span multiple lines.
+   * Merges raw OCR entries into a buffer. If an entry has no definition,
+   * its example text is appended to the example of the previous entry.
+   * This is used to combine examples that span multiple detected regions.
    *
-   * @param {Array<{definition:string,example:string}>} inputData - Newly extracted data.
-   * @param {Array<{definition:string,example:string}>} buf - Buffer to append to.
-   * @returns {Array<{definition:string,example:string}>} Updated buffer.
+   * @param {Array<{definition: string, example: string}>} inputData - Newly extracted data items.
+   * @param {Array<{definition: string, example: string}>} buf - The buffer of already processed items to append to.
+   * @returns {Array<{definition: string, example: string}>} The updated buffer.
    */
   processRawData(inputData, buf) {
     for (const item of inputData) {
@@ -35,10 +41,11 @@ export class DataProcessor {
   }
 
   /**
-   * Clean up and filter raw entries to prepare them for output.
+   * Cleans up and filters raw entries to prepare them for final output.
+   * This step processes the definition and example text separately.
    *
-   * @param {Array<{definition:string,example:string}>} inputData - Raw OCR results.
-   * @returns {Promise<Array<{definition:string,example:string}>>} Cleaned entries.
+   * @param {Array<{definition: string, example: string}>} inputData - Raw, merged OCR results.
+   * @returns {Promise<Array<{definition: string, example: string}>>} A promise that resolves to the cleaned entries.
    */
   async processExtractedData(inputData) {
     const processedData = []
@@ -46,7 +53,7 @@ export class DataProcessor {
     for (const item of inputData) {
       const { definition, example } = item
 
-      // Skip empty examples
+      // Skip entries with no example text
       if (example.trim() === '') continue
 
       processedData.push({
@@ -59,10 +66,11 @@ export class DataProcessor {
   }
 
   /**
-   * Normalize the definition text extracted from the PDF.
+   * Normalizes the definition text extracted from the PDF.
+   * Applies a series of regex-based replacements to fix common formatting issues.
    *
-   * @param {string} def - Raw definition string.
-   * @returns {string} Cleaned definition.
+   * @param {string} def - The raw definition string.
+   * @returns {string} The cleaned and formatted definition.
    */
   processDefinition(def) {
     if (!def) return ''
@@ -103,10 +111,11 @@ export class DataProcessor {
   }
 
   /**
-   * Normalize the example sentence or list.
+   * Normalizes the example sentence or list of examples.
+   * Applies various regex-based fixes for list formatting and other OCR errors.
    *
-   * @param {string} example - Raw example text.
-   * @returns {string} Cleaned example.
+   * @param {string} example - The raw example text.
+   * @returns {string} The cleaned and formatted example.
    */
   processExample(example) {
     if (!example) return ''
@@ -176,11 +185,11 @@ export class DataProcessor {
   }
 
   /**
-   * Apply a set of textual tweaks that are easier to perform
-   * programmatically than by hand.
+   * Applies a set of hardcoded textual tweaks for specific, known OCR errors.
+   * These are fixes that are easier to perform programmatically than by manual override.
    *
-   * @param {string} def - Input definition text.
-   * @returns {string} Tweaked definition text.
+   * @param {string} def - The input definition text.
+   * @returns {string} The tweaked definition text.
    */
   applyCosmeticFixes(def) {
     return def
@@ -197,52 +206,44 @@ export class DataProcessor {
   }
 
   /**
-   * Retrieve the current git version string for inclusion in outputs.
+   * Retrieves the current git version string (from `git describe`) for inclusion in output files.
+   * This method uses an `AbortController` for robust timeout handling.
    *
-   * @returns {Promise<string>} Git describe output or 'unknown'.
+   * @returns {Promise<string>} A promise that resolves to the git describe output or 'unknown' on error or timeout.
    */
   async getGitVersion() {
     return new Promise(resolve => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
       const git = spawn('git', ['describe', '--always', '--dirty'], {
-        timeout: 5000, // 5 second timeout
+        signal: controller.signal,
       })
+
       let output = ''
-      let resolved = false
-
-      const cleanup = result => {
-        if (!resolved) {
-          resolved = true
-          if (timeoutId) clearTimeout(timeoutId)
-          resolve(result)
-        }
-      }
-
       git.stdout.on('data', data => {
         output += data.toString()
       })
 
-      git.on('close', () => {
-        cleanup(output.trim() || 'unknown')
+      git.once('close', () => {
+        clearTimeout(timeoutId)
+        resolve(output.trim() || 'unknown')
       })
 
-      git.on('error', () => {
-        cleanup('unknown')
+      git.once('error', () => {
+        clearTimeout(timeoutId)
+        resolve('unknown') // Handles AbortError on timeout and other spawn errors
       })
-
-      // Fallback timeout
-      const timeoutId = setTimeout(() => {
-        git.kill()
-        cleanup('unknown')
-      }, 6000)
     })
   }
 
   /**
-   * Create CSV output from processed vocabulary entries.
+   * Creates CSV content from processed vocabulary entries.
+   * The CSV includes a header with the git version and generation timestamp.
    *
-   * @param {Array<{definition:string,example:string}>} data - Cleaned entries.
-   * @param {string|number} page - Page number or 'all'.
-   * @returns {Promise<string>} CSV content.
+   * @param {Array<{definition: string, example: string}>} data - The array of cleaned vocabulary entries.
+   * @param {string|number} page - The page number or 'all', used for context (not in output).
+   * @returns {Promise<string>} A promise that resolves to the full CSV content as a string.
    */
   async generateCSV(data, page) {
     const gitVersion = await this.getGitVersion()
