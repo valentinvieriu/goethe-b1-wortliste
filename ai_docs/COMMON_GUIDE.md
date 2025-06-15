@@ -22,7 +22,8 @@ The application processes a PDF document containing German vocabulary words with
 3. **Annotation** - Mark detected regions for verification (using `sharp`)
 4. **Text extraction** - OCR text from each identified region
 5. **Data processing** - Clean and format extracted text
-6. **Output generation** - Create HTML and CSV files
+6. **CSV generation** - Create CSV files as single source of truth
+7. **Client-side HTML** - JavaScript-based interface reads CSV files for display
 
 ### Output Structure
 
@@ -33,10 +34,9 @@ All generated files are placed in `output/` directory:
 - `output/[page]-[col].json` - Extracted data (Node.js) or `.msh` (Ruby)
 - `output/[page]-[col].txt` - Detected break points
 - `output/[page]-annot.png` - Annotated pages showing detection regions
-- `output/[page].html` - Individual page HTML output
 - `output/[page].csv` - Individual page CSV output
-- `output/all.html` - Combined HTML for all pages
-- `output/all.csv` - Combined CSV for all pages
+- `output/all.csv` - Combined CSV for all pages (single source of truth)
+- `output/index.html` - Client-side HTML interface (reads CSV files)
 
 ## Usage (Node.js Version - Recommended)
 
@@ -98,6 +98,19 @@ src/
 ### Vocabulary Count Verification
 
 Both versions produce exactly **4792 vocabulary entries** across pages 16-102, ensuring complete accuracy and compatibility.
+
+### Single-Source Architecture (Refactored)
+
+The system has been refactored to use **CSV as the single source of truth**:
+
+- **Processing**: Only generates CSV files during extraction and processing
+- **HTML Interface**: Client-side JavaScript reads CSV files dynamically
+- **Benefits**: 
+  - Eliminates data inconsistencies between HTML and CSV
+  - Faster processing (no server-side HTML generation)
+  - Simpler deployment (just serve static files)
+  - CSV files can be used directly in other applications
+- **Usage**: Open `output/index.html` in a browser to view the interactive interface
 
 ## Legacy Ruby Scripts (Still Available)
 
@@ -177,8 +190,8 @@ The `generate.rb` script includes extensive text processing:
 
 ### Output Formats
 
-- **HTML**: Responsive table with German vocabulary and examples
-- **CSV**: Two-column format suitable for flashcard applications like Anki
+- **CSV**: Two-column format suitable for flashcard applications like Anki (single source of truth)
+- **HTML**: Client-side responsive interface that reads CSV data for display and search
 
 ## Configuration
 

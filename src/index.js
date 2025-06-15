@@ -136,11 +136,14 @@ export class GoetheBrListProcessor {
    */
   async generateCombinedOutputs(allRawData) {
     const processedData = await this.dataProcessor.processExtractedData(allRawData)
-    const html = await this.dataProcessor.generateHTML(processedData, 'all')
     const csv = await this.dataProcessor.generateCSV(processedData, 'all')
+    const html = await this.dataProcessor.generateClientHTML()
 
-    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/index.html`, html)
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv)
+    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/index.html`, html)
+    
+    console.log(`✓ Generated all.csv with ${processedData.length} vocabulary entries`)
+    console.log('✓ Generated index.html (client-side interface that reads CSV)')
   }
 
   /**

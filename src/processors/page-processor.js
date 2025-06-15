@@ -21,7 +21,7 @@ export class PageProcessor {
   }
 
   /**
-   * Process an individual page of the PDF from image extraction to HTML/CSV.
+   * Process an individual page of the PDF from image extraction to CSV.
    *
    * @param {number} pageNum - 1-based page number.
    * @returns {Promise<Array<{definition:string,example:string}>>} Processed entries.
@@ -218,27 +218,23 @@ export class PageProcessor {
   }
 
   /**
-   * Write HTML and CSV output files for a page.
+   * Write CSV output files for a page.
    *
    * @param {Array} data - Processed entries for the page.
    * @param {string} page - Page identifier used for filenames.
    * @returns {Promise<void>} Resolves when files are written.
    */
   async generateOutputs(data, page) {
-    const htmlFile = `${this.outputDir}/${page}.html`
     const csvFile = `${this.outputDir}/${page}.csv`
 
-    // Skip if outputs already exist
-    if ((await fileExists(htmlFile)) && (await fileExists(csvFile))) {
+    // Skip if output already exists
+    if (await fileExists(csvFile)) {
       return
     }
 
-    console.log(`${page}: Generating outputs...`)
+    console.log(`${page}: Generating CSV output...`)
 
-    const html = await this.dataProcessor.generateHTML(data, page)
     const csv = await this.dataProcessor.generateCSV(data, page)
-
-    await fs.writeFile(htmlFile, html)
     await fs.writeFile(csvFile, csv)
   }
 }

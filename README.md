@@ -152,7 +152,7 @@ All generated files are placed in the `output/` directory:
 
 - `output/042.html` - Individual page HTML
 - `output/042.csv` - Individual page CSV
-- `output/all.html` - Combined HTML (all pages)
+- `output/index.html` - Combined HTML (all pages)
 - `output/all.csv` - Combined CSV (all pages)
 
 ## 🛠️ Development
