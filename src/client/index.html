@@ -17,20 +17,11 @@
         },
       }
     </script>
-    <script src="ui.js" defer></script>
+    <script type="module" src="ui.js"></script>
   </head>
   <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
-      <div id="app">
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden text-center py-12">
-          <div class="text-goethe-blue">
-            <div
-              class="animate-spin rounded-full h-8 w-8 border-b-2 border-goethe-blue mx-auto mb-4"
-            ></div>
-            <h1 class="text-xl font-medium">Loading vocabulary data...</h1>
-          </div>
-        </div>
-      </div>
+      <goethe-app></goethe-app>
     </div>
   </body>
 </html>
