@@ -284,67 +284,64 @@ export class DataProcessor {
       let currentPage = 'all'
 
       const parseCSV = (csvText) => {
-        const lines = csvText.split('\\n').filter(line => line.trim())
-        if (lines.length === 0) return { data: [], metadata: {} }
+        // Split into lines but allow empty lines; we'll reconstruct records
+        const lines = csvText.split('\\n');
+        const data = [];
+        let metadata = {};
+        if (lines.length === 0) return { data: [], metadata };
 
         // Parse header line for metadata
-        const headerMatch = lines[0].match(/^"([^"]+)","Version ([^"]+)"$/)
+        const headerMatch = lines[0].match(/^"([^"]+)","Version ([^"]+)"$/);
         if (headerMatch) {
           metadata = {
             title: headerMatch[1],
             version: headerMatch[2]
-          }
-          lines.shift() // Remove header
+          };
+          lines.shift(); // Remove header
         }
 
-        // Parse data lines
-        const data = []
-        for (const line of lines) {
-          if (!line.trim()) continue
-          
-          // Simple CSV parsing - handles quoted fields with escaped quotes
-          const fields = []
-          let current = ''
-          let inQuotes = false
-          let i = 0
-          
-          while (i < line.length) {
-            const char = line[i]
-            const nextChar = line[i + 1]
-            
-            if (char === '"') {
-              if (inQuotes && nextChar === '"') {
-                // Escaped quote
-                current += '"'
-                i += 2
+        let record = '';
+        // Helper to parse one complete CSV record string
+        const processRecord = (rec) => {
+          const fields = [];
+          let current = '';
+          let inQuotes = false;
+          for (let j = 0; j < rec.length; j++) {
+            const ch = rec[j], nextCh = rec[j+1];
+            if (ch === '"') {
+              if (inQuotes && nextCh === '"') {
+                current += '"';
+                j++;
               } else {
-                // Toggle quote state
-                inQuotes = !inQuotes
-                i++
+                inQuotes = !inQuotes;
               }
-            } else if (char === ',' && !inQuotes) {
-              // Field separator
-              fields.push(current)
-              current = ''
-              i++
+            } else if (ch === ',' && !inQuotes) {
+              fields.push(current);
+              current = '';
             } else {
-              current += char
-              i++
+              current += ch;
             }
           }
-          
-          // Add the last field
-          fields.push(current)
-          
+          fields.push(current);
           if (fields.length >= 2) {
             data.push({
               definition: fields[0],
               example: fields[1]
-            })
+            });
+          }
+        };
+
+        // Accumulate lines until we have balanced quotes
+        for (const line of lines) {
+          record = record ? record + '\\n' + line : line;
+          const quoteCount = (record.match(/"/g) || []).length;
+          if (quoteCount % 2 === 0) {
+            if (record.trim()) processRecord(record);
+            record = '';
           }
         }
 
-        return { data, metadata }
+        return { data, metadata };
       }
 
       const updateFilter = (newFilter) => {
