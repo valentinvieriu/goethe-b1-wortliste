@@ -70,22 +70,15 @@ const parseCSV = csvText => {
   return { data, metadata }
 }
 
-const updateFilter = newFilter => {
-  filter = newFilter.toLowerCase()
-  filteredData = allData.filter(
-    item =>
-      item.definition.toLowerCase().includes(filter) || item.example.toLowerCase().includes(filter),
-  )
-  document.getElementById('app').innerHTML = generateTemplate()
+const generateStatsHTML = () => {
+  return `
+    <div class="text-2xl font-bold text-goethe-blue">${filteredData.length}</div>
+    <div class="text-sm text-gray-600">${filteredData.length === 1 ? 'entry' : 'entries'}</div>
+    ${filter ? `<div class="text-xs text-gray-500 mt-1">of ${allData.length} total</div>` : ''}
+  `
 }
 
-const generateTemplate = () => {
-  const pageOptions = Array.from({ length: 87 }, (_, i) => {
-    const pageNum = i + 16
-    const selected = currentPage == pageNum ? 'selected' : ''
-    return `<option value="${pageNum}" ${selected}>Page ${pageNum}</option>`
-  }).join('')
-
+const generateTableContentHTML = () => {
   const tableRows = filteredData
     .map((item, index) => {
       const bgClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
@@ -130,6 +123,33 @@ const generateTemplate = () => {
             </tbody>
           </table>
         `
+  return noResults
+}
+
+const updateFilter = newFilter => {
+  filter = newFilter.toLowerCase()
+  filteredData = allData.filter(
+    item =>
+      item.definition.toLowerCase().includes(filter) || item.example.toLowerCase().includes(filter),
+  )
+
+  const tableContainer = document.getElementById('table-container')
+  if (tableContainer) {
+    tableContainer.innerHTML = generateTableContentHTML()
+  }
+
+  const statsContainer = document.getElementById('stats-container')
+  if (statsContainer) {
+    statsContainer.innerHTML = generateStatsHTML()
+  }
+}
+
+const generateTemplate = () => {
+  const pageOptions = Array.from({ length: 87 }, (_, i) => {
+    const pageNum = i + 16
+    const selected = currentPage == pageNum ? 'selected' : ''
+    return `<option value="${pageNum}" ${selected}>Page ${pageNum}</option>`
+  }).join('')
 
   return `
           <div class="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -176,17 +196,15 @@ const generateTemplate = () => {
                     </svg>
                   </div>
                 </div>
-                <div class="text-center md:text-right">
-                  <div class="text-2xl font-bold text-goethe-blue">${filteredData.length}</div>
-                  <div class="text-sm text-gray-600">${filteredData.length === 1 ? 'entry' : 'entries'}</div>
-                  ${filter ? `<div class="text-xs text-gray-500 mt-1">of ${allData.length} total</div>` : ''}
+                <div id="stats-container" class="text-center md:text-right">
+                  ${generateStatsHTML()}
                 </div>
               </div>
             </div>
 
             <!-- Table -->
-            <div class="overflow-x-auto">
-              ${noResults}
+            <div id="table-container" class="overflow-x-auto">
+              ${generateTableContentHTML()}
             </div>
 
             <!-- Footer -->
