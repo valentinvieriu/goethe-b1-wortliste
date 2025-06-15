@@ -206,35 +206,28 @@ export class DataProcessor {
   }
 
   /**
-   * Retrieves the current git version string (from `git describe`) for inclusion in output files.
-   * This method uses an `AbortController` for robust timeout handling.
+   * Retrieves the current git version string (`git describe`) with a hard 5 s timeout
+   * powered by {@link AbortSignal.timeout}. Falls back to `"unknown"` on error.
    *
-   * @returns {Promise<string>} A promise that resolves to the git describe output or 'unknown' on error or timeout.
+   * @returns {Promise<string>} Git version string or `'unknown'`.
    */
   async getGitVersion() {
-    return new Promise(resolve => {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
+    try {
       const git = spawn('git', ['describe', '--always', '--dirty'], {
-        signal: controller.signal,
+        // Node-22 convenience: automatically aborts the child if it’s still running
+        // after the given period, raising an AbortError we handle below.
+        signal: AbortSignal.timeout(5_000),
       })
 
       let output = ''
-      git.stdout.on('data', data => {
-        output += data.toString()
-      })
+      for await (const chunk of git.stdout) {
+        output += chunk.toString()
+      }
 
-      git.once('close', () => {
-        clearTimeout(timeoutId)
-        resolve(output.trim() || 'unknown')
-      })
-
-      git.once('error', () => {
-        clearTimeout(timeoutId)
-        resolve('unknown') // Handles AbortError on timeout and other spawn errors
-      })
-    })
+      return output.trim() || 'unknown'
+    } catch {
+      return 'unknown'
+    }
   }
 
   /**

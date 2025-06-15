@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "module": "es2022",
+    "target": "es2022",
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": false,
+    "baseUrl": ".",
+    "paths": {
+      "@runtime/*": ["src/runtime/*"],
+      "@processors/*": ["src/processors/*"],
+      "@utils/*": ["src/utils/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "coverage", "**/*.test.js"]
+}
