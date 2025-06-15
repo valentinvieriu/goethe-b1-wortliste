@@ -286,9 +286,23 @@ export class DataProcessor {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${pageTitle} :: Goethe Zertifikat B1 Wortliste</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'goethe-blue': '#005AA0',
+              'goethe-light': '#E8F4FD'
+            }
+          }
+        }
+      }
+    </script>
   </head>
-  <body class="p-4">
-    <div id="app"></div>
+  <body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+      <div id="app"></div>
+    </div>
     <script type="application/json" id="data">${dataJson}</script>
     <script type="module">
       import { html, render } from 'https://unpkg.com/lit-html?module'
@@ -302,86 +316,136 @@ export class DataProcessor {
       const nextPageStr = '${nextPageStr}'
 
       let filter = ''
+      let filteredData = data
 
-      const update = () => {
-        const filtered = data.filter(
+      const updateFilter = (newFilter) => {
+        filter = newFilter.toLowerCase()
+        filteredData = data.filter(
           item =>
             item.definition.toLowerCase().includes(filter) ||
             item.example.toLowerCase().includes(filter),
         )
-
-      const template = html\`
-          <div class="max-w-4xl mx-auto">
-            <h1 class="text-2xl font-bold mb-2">Goethe Zertifikat B1 Wortliste</h1>
-            <p>Version \${gitVersion} -- generated at \${generatedAt}</p>
-            <h2 class="text-xl font-semibold mt-4">\${pageTitle}</h2>
-            <input
-              type="text"
-              placeholder="Search..."
-              class="border p-2 my-4 w-full"
-              @input=${e => {
-                filter = e.target.value.toLowerCase()
-                update()
-              }}
-            />
-            <p class="mb-2">\${filtered.length} entries</p>
-            <table class="table-auto border-collapse w-full text-left">
-              <thead>
-                <tr>
-                  <th class="border px-2 py-1">Def</th>
-                  <th class="border px-2 py-1">Example</th>
-                </tr>
-              </thead>
-              <tbody>
-                \${filtered.map(
-                  item =>
-                    html\`<tr>
-                      <td class="border px-2 py-1 whitespace-pre-line">\${item.definition}</td>
-                      <td class="border px-2 py-1 whitespace-pre-line">\${item.example}</td>
-                    </tr>\`,
-                )}
-                \${
-                  !isAllPages
-                    ? html\`<tr>
-                        <td class="border px-2 py-1">
-                            \${prevPageStr
-                              ? html\`<a href="\${prevPageStr}.html">page \${prevPageStr}</a>\`
-                              : html\`&nbsp;\`}
-                        </td>
-                        <td class="border px-2 py-1">
-                            \${nextPageStr
-                              ? html\`<a href="\${nextPageStr}.html">page \${nextPageStr}</a>\`
-                              : html\`&nbsp;\`}
-                        </td>
-                      </tr>\`
-                    : html\`\`
-                }
-              </tbody>
-            </table>
-            <p class="mt-4 max-w-prose">
-              All of this text is extracted from
-              <a href="${CONFIG.PDF_URL}">${CONFIG.PDF_FILE}</a>
-              (© 2016 Goethe-Institut und ÖSD) because their PDF was unusable for
-              making flashcards.
-            </p>
-            <p class="max-w-prose">
-              I elaborated on
-              <a href="https://wejn.org/2023/12/extracting-data-from-goethe-zertifikat-b1-wortliste/">
-                the extraction process
-              </a>
-              on my blog.
-            </p>
-            <p class="max-w-prose">
-              It is highly likely you can use this for personal purposes, but I
-              make no claim that I own the resulting data. In other words: if I
-              were you, I wouldn't go using this in any commercial capacity.
-            </p>
-          </div>
-        \`
-        render(template, document.getElementById('app'))
+        render(template(), document.getElementById('app'))
       }
 
-      update()
+      const template = () => html\`
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+          <!-- Header -->
+          <div class="bg-goethe-blue text-white px-6 py-8">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2">Goethe Zertifikat B1 Wortliste</h1>
+            <p class="text-goethe-light text-sm opacity-90">Version \${gitVersion} -- generated at \${generatedAt}</p>
+            <h2 class="text-xl md:text-2xl font-semibold mt-4 text-white">\${pageTitle}</h2>
+          </div>
+
+          <!-- Search and Stats -->
+          <div class="px-6 py-6 bg-goethe-light border-b">
+            <div class="flex flex-col md:flex-row md:items-center gap-4">
+              <div class="flex-1">
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search vocabulary</label>
+                <div class="relative">
+                  <input
+                    id="search"
+                    type="text"
+                    placeholder="Search definitions and examples..."
+                    class="w-full px-4 py-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-goethe-blue focus:border-goethe-blue transition-colors"
+                    @input=\${e => updateFilter(e.target.value)}
+                  />
+                  <svg class="absolute left-3 top-3.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="text-center md:text-right">
+                <div class="text-2xl font-bold text-goethe-blue">\${filteredData.length}</div>
+                <div class="text-sm text-gray-600">\${filteredData.length === 1 ? 'entry' : 'entries'}</div>
+                \${filter ? html\`<div class="text-xs text-gray-500 mt-1">of \${data.length} total</div>\` : ''}
+              </div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            \${filteredData.length === 0 && filter ? html\`
+              <div class="px-6 py-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.441.935-6 2.461m0 0V21m6-6h.01M6 21h12a2 2 0 002-2V5a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">No entries found</h3>
+                <p class="mt-2 text-gray-500">Try adjusting your search terms.</p>
+              </div>
+            \` : html\`
+              <table class="w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">
+                      Definition
+                    </th>
+                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">
+                      Example
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  \${filteredData.map((item, index) => html\`
+                    <tr class="\${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors">
+                      <td class="px-6 py-4 text-sm text-gray-900 whitespace-pre-line align-top leading-relaxed">
+                        \${item.definition}
+                      </td>
+                      <td class="px-6 py-4 text-sm text-gray-700 whitespace-pre-line align-top leading-relaxed">
+                        \${item.example}
+                      </td>
+                    </tr>
+                  \`)}
+                  \${!isAllPages ? html\`
+                    <tr class="bg-yellow-50 border-t-2 border-yellow-200">
+                      <td class="px-6 py-4 text-center">
+                        \${prevPageStr ? html\`
+                          <a href="\${prevPageStr}.html" class="inline-flex items-center px-4 py-2 text-sm font-medium text-goethe-blue hover:bg-goethe-blue hover:text-white transition-colors rounded-md border border-goethe-blue">
+                            ← Previous (Page \${parseInt(prevPageStr)})
+                          </a>
+                        \` : html\`
+                          <span class="text-gray-400">First page</span>
+                        \`}
+                      </td>
+                      <td class="px-6 py-4 text-center">
+                        \${nextPageStr ? html\`
+                          <a href="\${nextPageStr}.html" class="inline-flex items-center px-4 py-2 text-sm font-medium text-goethe-blue hover:bg-goethe-blue hover:text-white transition-colors rounded-md border border-goethe-blue">
+                            Next (Page \${parseInt(nextPageStr)}) →
+                          </a>
+                        \` : html\`
+                          <span class="text-gray-400">Last page</span>
+                        \`}
+                      </td>
+                    </tr>
+                  \` : ''}
+                </tbody>
+              </table>
+            \`}
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 py-6 bg-gray-50 border-t space-y-3 text-sm text-gray-600">
+            <p>
+              All text extracted from
+              <a href="${CONFIG.PDF_URL}" class="text-goethe-blue hover:underline font-medium">${CONFIG.PDF_FILE}</a>
+              (© 2016 Goethe-Institut und ÖSD) for flashcard creation.
+            </p>
+            <p>
+              Read about
+              <a href="https://wejn.org/2023/12/extracting-data-from-goethe-zertifikat-b1-wortliste/" class="text-goethe-blue hover:underline font-medium">
+                the extraction process
+              </a>
+              on the developer's blog.
+            </p>
+            <p class="text-xs text-gray-500">
+              For personal use only. Commercial use of this data is not recommended.
+            </p>
+          </div>
+        </div>
+      \`
+
+      // Initial render
+      render(template(), document.getElementById('app'))
     </script>
   </body>
 </html>`

@@ -25,7 +25,7 @@ test('Page 42 output files exist after processing', async () => {
 
 test('Combined output files exist after full processing', async () => {
   // This test checks if combined output files were generated
-  const files = ['output/all.csv', 'output/all.html']
+  const files = ['output/all.csv', 'output/index.html']
 
   let foundFiles = 0
   for (const file of files) {

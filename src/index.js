@@ -139,7 +139,7 @@ export class GoetheBrListProcessor {
     const html = await this.dataProcessor.generateHTML(processedData, 'all')
     const csv = await this.dataProcessor.generateCSV(processedData, 'all')
 
-    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.html`, html)
+    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/index.html`, html)
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv)
   }
 
