@@ -279,8 +279,7 @@ export class DataProcessor {
 
     const dataJson = JSON.stringify(data).replace(/</g, '\u003c')
 
-    const html =
-      `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
