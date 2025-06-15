@@ -347,14 +347,12 @@ export class DataProcessor {
                         <th class="border px-2 py-1">
                             \${prevPageStr
                               ? html\`<a href="\${prevPageStr}.html">page \${prevPageStr}</a>\`
-                              : html` & nbsp
-    ;`}
+                              : html`&nbsp;`}
                         </th>
                         <th class="border px-2 py-1">
                             \${nextPageStr
                               ? html\`<a href="\${nextPageStr}.html">page \${nextPageStr}</a>\`
-                              : html` & nbsp
-    ;`}
+                              : html`&nbsp;`}
                         </th>
                       </tr>\`
                     : html``
