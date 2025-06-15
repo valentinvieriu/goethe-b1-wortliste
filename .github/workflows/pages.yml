@@ -21,10 +21,14 @@ jobs:
         run: npm ci
       - name: Generate HTML
         run: npm run process:all
+      - name: Prepare Pages content
+        run: |
+          mkdir gh-pages
+          cp output/*.html gh-pages/
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: ./output
+          path: ./gh-pages
   deploy:
     needs: build
     runs-on: ubuntu-latest

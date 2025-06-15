@@ -190,7 +190,7 @@ node src/index.js --help    # Show help
 
 ### GitHub Pages Deployment
 
-Every push to the `master` branch triggers a workflow that runs `npm run process:all` and publishes the generated HTML from `output/` to GitHub Pages. The workflow file lives in `.github/workflows/pages.yml`.
+Every push to the `master` branch triggers a workflow that runs `npm run process:all` and publishes only the generated HTML files to GitHub Pages. The workflow file lives in `.github/workflows/pages.yml`.
 
 ### Key Implementation Details
 
