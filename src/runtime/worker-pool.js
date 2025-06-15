@@ -78,6 +78,24 @@ export class WorkerPool {
       this._replaceWorker(worker)
     }
 
+    // Handle unexpected termination (e.g. process.exit inside worker)
+    const onExit = code => {
+      // code 0 == graceful exit
+      if (code !== 0) {
+        const task = worker.currentTask
+        if (task) {
+          if (task.timer) clearTimeout(task.timer)
+          task.reject(new Error(`Worker exited with code ${code}`))
+          worker.currentTask = null
+        }
+        worker.removeAllListeners()
+        this._replaceWorker(worker)
+      } else if (!worker.currentTask) {
+        // If the worker exited gracefully while idle, simply replace it
+        this._replaceWorker(worker)
+      }
+    }
+
     worker.once('online', () => {
       this._workers.push(worker)
       this._idleWorkers.push(worker)
@@ -87,6 +105,7 @@ export class WorkerPool {
 
     worker.on('message', onMessage)
     worker.on('error', onError)
+    worker.on('exit', onExit)
 
     return promise
   }
@@ -97,6 +116,13 @@ export class WorkerPool {
   }
 
   async _replaceWorker(worker) {
+    if (this._isClosing) {
+      // During shutdown just ensure the worker ends—no respawn, no noise
+      try {
+        await worker.terminate()
+      } catch {}
+      return
+    }
     console.warn(`Worker failed or timed out. Terminating and replacing...`)
     const idx = this._workers.indexOf(worker)
     if (idx > -1) this._workers.splice(idx, 1)
@@ -109,25 +135,28 @@ export class WorkerPool {
   }
 
   _dispatch() {
-    if (this._queue.length === 0 || this._idleWorkers.length === 0) {
-      return
+    // Drain the queue onto every idle worker that is available
+    while (this._queue.length > 0 && this._idleWorkers.length > 0) {
+      const worker = this._idleWorkers.pop()
+      const task = this._queue.shift()
+
+      // Allow callers to override timeout per job: pool.exec({payload, timeout: 10_000})
+      const timeoutMs =
+        typeof task.job.timeout === 'number' && task.job.timeout > 0 ? task.job.timeout : 30_000
+
+      const onTimeout = () => {
+        task.reject(new Error(`Worker job timed out after ${timeoutMs / 1000}s`))
+        worker.currentTask = null
+        // The worker is now in an unknown state, replace it
+        worker.removeAllListeners()
+        this._replaceWorker(worker)
+      }
+
+      task.timer = setTimeout(onTimeout, timeoutMs)
+      worker.currentTask = task
+
+      worker.postMessage(task.job.payload)
     }
-
-    const worker = this._idleWorkers.pop()
-    const task = this._queue.shift()
-
-    const onTimeout = () => {
-      task.reject(new Error(`Worker job timed out after 30s`))
-      worker.currentTask = null
-      // The worker is now in an unknown state, replace it
-      worker.removeAllListeners()
-      this._replaceWorker(worker)
-    }
-
-    task.timer = setTimeout(onTimeout, 30_000)
-    worker.currentTask = task
-
-    worker.postMessage(task.job.payload)
   }
 
   /**
@@ -164,8 +193,21 @@ export class WorkerPool {
    * @returns {Promise<void>}
    */
   async destroy() {
+    this._isClosing = true
+    // Fail fast for any tasks that never made it to a worker
+    for (const pending of this._queue) {
+      if (pending.timer) clearTimeout(pending.timer)
+      pending.reject(new Error('Worker pool destroyed before task execution'))
+    }
     this._queue = []
-    await Promise.all(this._workers.map(w => w.terminate()))
+
+    // Detach listeners so onExit/onError won’t spawn new workers
+    await Promise.all(
+      this._workers.map(async w => {
+        w.removeAllListeners()
+        await w.terminate()
+      }),
+    )
     this._workers = []
     this._idleWorkers = []
   }
