@@ -141,7 +141,7 @@ export class GoetheBrListProcessor {
 
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv)
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/index.html`, html)
-    
+
     console.log(`✓ Generated all.csv with ${processedData.length} vocabulary entries`)
     console.log('✓ Generated index.html (client-side interface that reads CSV)')
   }

@@ -105,7 +105,7 @@ The system has been refactored to use **CSV as the single source of truth**:
 
 - **Processing**: Only generates CSV files during extraction and processing
 - **HTML Interface**: Client-side JavaScript reads CSV files dynamically
-- **Benefits**: 
+- **Benefits**:
   - Eliminates data inconsistencies between HTML and CSV
   - Faster processing (no server-side HTML generation)
   - Simpler deployment (just serve static files)
