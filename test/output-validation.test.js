@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert'
 import { fileExists } from '../src/utils/fs.js'
 
-test('Page 42 output files exist after processing', async () => {
+test('Page 42 output files exist after processing', { concurrency: 1 }, async () => {
   // This test checks if output files were generated
   const files = ['output/042.csv', 'output/042.html', 'output/042-l.json', 'output/042-r.json']
 
@@ -23,7 +23,7 @@ test('Page 42 output files exist after processing', async () => {
   assert.ok(true)
 })
 
-test('Combined output files exist after full processing', async () => {
+test('Combined output files exist after full processing', { concurrency: 1 }, async () => {
   // This test checks if combined output files were generated
   const files = ['output/all.csv', 'output/index.html']
 

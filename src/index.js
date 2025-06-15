@@ -103,6 +103,9 @@ export class GoetheBrListProcessor {
     console.log('Generating final combined files…')
     await this.generateCombinedOutputs(allRawData)
 
+    // Clean up resources so Node can exit cleanly
+    await this.destroy()
+
     console.log('Processing completed successfully!')
   }
 
@@ -128,6 +131,10 @@ export class GoetheBrListProcessor {
 
     // Process the specific page
     await this.pageProcessor.processPage(pageNum)
+
+    // Clean up resources so Node can exit cleanly
+    await this.destroy()
+
     console.log(`Page ${pageNum} processed successfully!`)
   }
 
@@ -149,6 +156,17 @@ export class GoetheBrListProcessor {
 
     console.log(`✓ Generated all.csv with ${processedData.length} vocabulary entries`)
     console.log('✓ Copied client-side UI to output directory (index.html, ui.js)')
+  }
+
+  /**
+   * Release resources (e.g. worker pools) so the Node.js process can exit.
+   *
+   * @returns {Promise<void>}
+   */
+  async destroy() {
+    if (this.pageProcessor && typeof this.pageProcessor.destroy === 'function') {
+      await this.pageProcessor.destroy()
+    }
   }
 
   /**

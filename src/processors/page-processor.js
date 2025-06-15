@@ -250,4 +250,13 @@ export class PageProcessor {
     const csv = await this.dataProcessor.generateCSV(data, page)
     await fs.writeFile(csvFile, csv)
   }
+
+  /**
+   * Clean up resources such as the ImageProcessor’s worker pool.
+   *
+   * @returns {Promise<void>}
+   */
+  async destroy() {
+    await this.imageProcessor.destroy()
+  }
 }
