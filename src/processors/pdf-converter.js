@@ -6,7 +6,10 @@ import { CONFIG } from '../config.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
 
 /**
- * Generate PNG filename based on PDF filename
+ * Generate the PNG filename for a given page number.
+ *
+ * @param {number} pageNum - Page number (1-based).
+ * @returns {string} Corresponding PNG file name.
  */
 function generatePngFilename(pageNum) {
   const baseName = path.basename(CONFIG.PDF_FILE, '.pdf')
@@ -22,13 +25,21 @@ function generatePngFilename(pageNum) {
  * the available CPU cores for a significant speed-up on multicore hosts.
  */
 export class PDFConverter {
+  /**
+   * Create a new PDFConverter instance.
+   * Stores configuration values and lazily loads the PDF document.
+   */
   constructor() {
     this.pdfFile = CONFIG.PDF_FILE
     this.outputDir = CONFIG.OUTPUT_DIR
     this._doc = null // Lazy-loaded MuPDF document
   }
 
-  /** Lazily open the document (only once) */
+  /**
+   * Lazily open the PDF document so it is loaded only once.
+   *
+   * @returns {Promise<mupdf.PDFDocument>} The opened MuPDF document.
+   */
   async _getDocument() {
     if (this._doc) return this._doc
     const pdfBuffer = await fs.readFile(this.pdfFile)
@@ -109,7 +120,12 @@ export class PDFConverter {
     console.log('PDF conversion completed (MuPDF.js).')
   }
 
-  /** Path helper (unchanged) */
+  /**
+   * Build the path to a previously rendered PNG page image.
+   *
+   * @param {number} pageNum - Page number (1-based).
+   * @returns {Promise<string>} Absolute path to the PNG image.
+   */
   async getPageImagePath(pageNum) {
     const paddedPage = padPageNumber(pageNum)
     const imagePath = `${this.outputDir}/${generatePngFilename(pageNum)}`

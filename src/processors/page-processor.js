@@ -8,6 +8,9 @@ import { DataProcessor } from './data-processor.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
 
 export class PageProcessor {
+  /**
+   * Processor orchestrating all steps for a single PDF page.
+   */
   constructor() {
     this.pdfConverter = new PDFConverter()
     this.imageProcessor = new ImageProcessor()
@@ -17,6 +20,12 @@ export class PageProcessor {
     this.outputDir = CONFIG.OUTPUT_DIR
   }
 
+  /**
+   * Process an individual page of the PDF from image extraction to HTML/CSV.
+   *
+   * @param {number} pageNum - 1-based page number.
+   * @returns {Promise<Array<{definition:string,example:string}>>} Processed entries.
+   */
   async processPage(pageNum) {
     const paddedPage = padPageNumber(pageNum)
     console.log(`Processing page ${paddedPage}...`)
@@ -53,6 +62,14 @@ export class PageProcessor {
     return processedData
   }
 
+  /**
+   * Process a single column of a page: detect breaks, extract text and images.
+   *
+   * @param {string} imagePath - PNG path for the whole page.
+   * @param {number} pageNum - Page number being processed.
+   * @param {'l'|'r'} column - Column identifier.
+   * @returns {Promise<{data:Array, ranges:Array}>} Extracted data and ranges.
+   */
   async processColumn(imagePath, pageNum, column) {
     const paddedPage = padPageNumber(pageNum)
     const rangesFile = `${this.outputDir}/${paddedPage}-${column}.txt`
@@ -121,6 +138,15 @@ export class PageProcessor {
     return { data: extractedData, ranges: ranges }
   }
 
+  /**
+   * Generate a single annotated image showing break ranges for both columns.
+   *
+   * @param {string} imagePath - Path to the original page PNG.
+   * @param {number} pageNum - Current page number.
+   * @param {Array<Array<number>>} leftRanges - Break ranges for the left column.
+   * @param {Array<Array<number>>} rightRanges - Break ranges for the right column.
+   * @returns {Promise<void>} Resolves when the annotation is written.
+   */
   async createCombinedAnnotation(imagePath, pageNum, leftRanges, rightRanges) {
     const paddedPage = padPageNumber(pageNum)
     const annotPath = `${this.outputDir}/${paddedPage}-annot.png`
@@ -153,6 +179,15 @@ export class PageProcessor {
     await this.imageProcessor.annotateImage(imagePath, annotPath, allRectangles)
   }
 
+  /**
+   * Produce cropped PNG snippets for each detected region.
+   *
+   * @param {string} imagePath - Original page image.
+   * @param {number} pageNum - Page number.
+   * @param {Array<Array<number>>} ranges - Break ranges of the column.
+   * @param {'l'|'r'} column - Column identifier.
+   * @returns {Promise<void>} Resolves when all crops are written.
+   */
   async createCroppedImages(imagePath, pageNum, ranges, column) {
     const paddedPage = padPageNumber(pageNum)
     const columnConfig = column === 'l' ? CONFIG.LEFT_COLUMN : CONFIG.RIGHT_COLUMN
@@ -182,6 +217,13 @@ export class PageProcessor {
     }
   }
 
+  /**
+   * Write HTML and CSV output files for a page.
+   *
+   * @param {Array} data - Processed entries for the page.
+   * @param {string} page - Page identifier used for filenames.
+   * @returns {Promise<void>} Resolves when files are written.
+   */
   async generateOutputs(data, page) {
     const htmlFile = `${this.outputDir}/${page}.html`
     const csvFile = `${this.outputDir}/${page}.csv`

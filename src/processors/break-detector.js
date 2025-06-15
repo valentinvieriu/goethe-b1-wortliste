@@ -3,6 +3,9 @@ import { BREAK_OVERRIDES, CONFIG } from '../config.js'
 import { padPageNumber } from '../utils/fs.js'
 
 export class BreakDetector {
+  /**
+   * Create a new break detector using configured threshold value.
+   */
   constructor() {
     this.threshold = CONFIG.BREAK_THRESHOLD
   }
@@ -80,6 +83,12 @@ export class BreakDetector {
   /**
    * Checks if a row of pixels is predominantly "white" (empty).
    * Assumes RGB or RGBA format.
+   *
+   * @param {Buffer} pixelBuffer - The raw pixel buffer.
+   * @param {number} rowIdx - Index of the row to check.
+   * @param {number} width - Width of the image in pixels.
+   * @param {number} channels - Number of color channels.
+   * @returns {boolean} True if the row is mostly white.
    */
   isRowEmpty(pixelBuffer, rowIdx, width, channels) {
     const rowStartOffset = rowIdx * width * channels

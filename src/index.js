@@ -9,6 +9,9 @@ import { DataProcessor } from './processors/data-processor.js'
 import { fileExists } from './utils/fs.js'
 
 export class GoetheBrListProcessor {
+  /**
+   * Main orchestrator for processing the entire Wortliste.
+   */
   constructor() {
     this.pdfConverter = new PDFConverter()
     this.pageProcessor = new PageProcessor()
@@ -41,6 +44,11 @@ export class GoetheBrListProcessor {
   /**
    * Process the whole Wortliste (pages 16 – 102) in parallel.
    * Concurrency is capped at the number of detected CPU cores.
+   */
+  /**
+   * Process all pages of the PDF in parallel and generate combined outputs.
+   *
+   * @returns {Promise<void>}
    */
   async processAll() {
     console.log('Starting Goethe B1 Wortliste processing...')
@@ -94,6 +102,12 @@ export class GoetheBrListProcessor {
     console.log('Processing completed successfully!')
   }
 
+  /**
+   * Process a single page of the Wortliste.
+   *
+   * @param {number} pageNum - Page number to process.
+   * @returns {Promise<void>}
+   */
   async processPage(pageNum) {
     console.log(`Processing single page: ${pageNum}`)
 
@@ -113,6 +127,12 @@ export class GoetheBrListProcessor {
     console.log(`Page ${pageNum} processed successfully!`)
   }
 
+  /**
+   * Produce combined HTML and CSV outputs from aggregated data.
+   *
+   * @param {Array} allRawData - Raw entries from all pages.
+   * @returns {Promise<void>}
+   */
   async generateCombinedOutputs(allRawData) {
     const processedData = await this.dataProcessor.processExtractedData(allRawData)
     const html = await this.dataProcessor.generateHTML(processedData, 'all')
@@ -122,6 +142,9 @@ export class GoetheBrListProcessor {
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv)
   }
 
+  /**
+   * Print command-line usage instructions to stdout.
+   */
   showUsage() {
     console.log('Usage:')
     console.log('  node src/index.js --all              # Process all pages')
@@ -138,6 +161,9 @@ export class GoetheBrListProcessor {
   }
 }
 
+/**
+ * CLI entry point parsing arguments and invoking processors.
+ */
 async function main() {
   const args = process.argv.slice(2)
   const processor = new GoetheBrListProcessor()
