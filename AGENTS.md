@@ -1,53 +1,63 @@
 # Repository Overview
 
-This repository extracts vocabulary entries from the **Goethe-Zertifikat B1 Wortliste** PDF and turns them into CSV/HTML files. The original PDF is not included (it is listed in `.gitignore`).
+This repository extracts vocabulary entries from the **Goethe-Zertifikat B1 Wortliste** PDF and converts them into CSV/HTML files for flashcard creation.
 
-The processing pipeline uses Ruby scripts together with ImageMagick and `pdftotext`/`pdftocairo` utilities. The main entry point is `make` which calls `process-all.sh`.
+**📖 For complete documentation, see [ai_docs/COMMON_GUIDE.md](ai_docs/COMMON_GUIDE.md)**
 
+## Quick Start
 
-## Detailed extraction steps
+**Recommended (Node.js):**
 
-The workflow mirrors [the extraction blog post](https://wejn.org/2023/12/extracting-data-from-goethe-zertifikat-b1-wortliste/). It processes the PDF at **300 dpi** and assumes constant coordinates:
+- `npm run process:all` - Process all pages (016-102)
+- `npm run process:page 42` - Process single page
+- `npm test` - Run test suite
+- `npm run lint` - Run ESLint
+- `npm run format` - Format with Prettier
 
-- **Y range:** 320..3260
-- **Column 1:** x=140..540
-- **Column 2:** x=540..1200
-- **Column 3:** x=1300..1710
-- **Column 4:** x=1710..2340
+**Legacy (Ruby):**
 
-Running `make` performs the following:
-1. Convert pages to PNGs via `pdftocairo`.
-2. `process-page.sh` crops column groups and saves them as XPM.
-3. `detect-breaks.rb` finds long whitespace (threshold around 42 px) to define entry rectangles. Overrides handle special pages.
-4. `annotate.rb` draws red rectangles for inspection.
-5. `extract.rb` runs `pdftotext` on each rectangle, storing results in `.msh` files.
-6. `generate.rb` merges fragments, cleans formatting, and outputs page HTML/CSV or an `all` file.
+- `make` or `./process-all.sh` - Process all pages
+- `./process-page.sh [page]` - Process single page
 
-The overrides and cleanup rules were iteratively improved by running the scripts and checking `git diff` (diff-driven development).
+## Key Points for AI Agents
 
-## Directory structure
+### Current Architecture
 
-- `process-all.sh` – processes the whole PDF. Converts the PDF to individual PNG pages (using `pdftocairo`), then iterates over the pages and calls `process-page.sh` for each page.
-- `process-page.sh` – runs the pipeline for a single page: cropping, detecting line breaks, drawing annotations, extracting text, and generating per-page CSV/HTML outputs.
-- `annotate.rb` – draws rectangles on cropped page images to visualise detected text areas.
-- `detect-breaks.rb` – scans XPM images for long whitespace areas to determine vertical break positions. Contains page-specific overrides for tricky pages.
-- `extract.rb` – extracts text from rectangular regions of the PDF using `pdftotext`. The results are stored in marshal (`.msh`) files for later processing.
-- `generate.rb` – combines the extracted data, performs various clean-ups, and produces `*.html` and `*.csv` files. Passing `all` as the argument merges all pages.
-- `Makefile` – running `make` simply invokes `./process-all.sh`.
-- `.gitignore` – ignores the original PDF, intermediate PNGs, marshal files and generated outputs.
-- `LICENSE` – the project is released under the AGPL 3.0.
+- **Primary**: Node.js 22 with `sharp` for image processing (75% faster than Ruby)
+- **Legacy**: Ruby scripts with ImageMagick (still available)
+- **Output**: 4,792 vocabulary entries from pages 16-102
 
-## Running the pipeline
+### File Structure
 
-1. Place `Goethe-Zertifikat_B1_Wortliste.pdf` in the repository root (it is not tracked).
-2. Ensure `ruby`, `pdftocairo`, `pdftotext` and `convert` (ImageMagick) are installed.
-3. Run `make` to process all pages and generate combined `all.html` and `all.csv`.
-   Individual per-page outputs will also be created (e.g. `016.html`, `016.csv`).
+```
+src/                    # Node.js processors
+├── index.js           # Main CLI entry point
+├── config.js          # Break overrides for 19 special pages
+└── processors/        # Core processing modules
 
-## Coding conventions
+*.rb, *.sh             # Legacy Ruby scripts
+output/                # All generated files (gitignored)
+```
 
-- Ruby code uses two-space indentation.
-- Shell scripts are indented with two spaces.
-- Makefiles use tab characters for command lines.
+### Processing Pipeline
 
-There are no automated tests in this repository.
+1. PDF → PNG pages (parallel conversion)
+2. Break detection → Text boundaries via pixel analysis
+3. Text extraction → OCR via pdftotext
+4. Data processing → Clean and format
+5. Output generation → HTML/CSV files
+
+### Development Notes
+
+- Zero npm dependencies except `sharp`
+- CPU-parallel processing across all cores
+- JSON caching for faster reprocessing
+- Extensive text cleanup for German vocabulary
+- 19 page-specific override cases in break detection
+- ESLint + Prettier + Husky for code quality
+
+### Coding Conventions
+
+- Node.js: Standard formatting
+- Ruby: Two-space indentation
+- All files use UTF-8 encoding for German characters

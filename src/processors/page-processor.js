@@ -1,183 +1,202 @@
-import { promises as fs } from 'fs';
-import { CONFIG } from '../config.js';
-import { PDFConverter } from './pdf-converter.js';
-import { ImageProcessor } from './image-processor.js';
-import { BreakDetector } from './break-detector.js';
-import { TextExtractor } from './text-extractor.js';
-import { DataProcessor } from './data-processor.js';
-import { fileExists, padPageNumber } from '../utils/fs.js';
+import { promises as fs } from 'fs'
+import { CONFIG } from '../config.js'
+import { PDFConverter } from './pdf-converter.js'
+import { ImageProcessor } from './image-processor.js'
+import { BreakDetector } from './break-detector.js'
+import { TextExtractor } from './text-extractor.js'
+import { DataProcessor } from './data-processor.js'
+import { fileExists, padPageNumber } from '../utils/fs.js'
 
 export class PageProcessor {
   constructor() {
-    this.pdfConverter = new PDFConverter();
-    this.imageProcessor = new ImageProcessor();
-    this.breakDetector = new BreakDetector();
-    this.textExtractor = new TextExtractor();
-    this.dataProcessor = new DataProcessor();
-    this.outputDir = CONFIG.OUTPUT_DIR;
+    this.pdfConverter = new PDFConverter()
+    this.imageProcessor = new ImageProcessor()
+    this.breakDetector = new BreakDetector()
+    this.textExtractor = new TextExtractor()
+    this.dataProcessor = new DataProcessor()
+    this.outputDir = CONFIG.OUTPUT_DIR
   }
 
   async processPage(pageNum) {
-    const paddedPage = padPageNumber(pageNum);
-    console.log(`Processing page ${paddedPage}...`);
+    const paddedPage = padPageNumber(pageNum)
+    console.log(`Processing page ${paddedPage}...`)
 
     // Ensure output directory exists
-    await fs.mkdir(this.outputDir, { recursive: true });
+    await fs.mkdir(this.outputDir, { recursive: true })
 
     // Get page image path
-    const imagePath = await this.pdfConverter.getPageImagePath(pageNum);
+    const imagePath = await this.pdfConverter.getPageImagePath(pageNum)
 
     // Process both columns (without annotation)
-    const { data: leftData, ranges: leftRanges } = await this.processColumn(imagePath, pageNum, 'l');
-    const { data: rightData, ranges: rightRanges } = await this.processColumn(imagePath, pageNum, 'r');
+    const { data: leftData, ranges: leftRanges } = await this.processColumn(imagePath, pageNum, 'l')
+    const { data: rightData, ranges: rightRanges } = await this.processColumn(
+      imagePath,
+      pageNum,
+      'r',
+    )
 
     // Create annotation for BOTH columns together
-    await this.createCombinedAnnotation(imagePath, pageNum, leftRanges, rightRanges);
+    await this.createCombinedAnnotation(imagePath, pageNum, leftRanges, rightRanges)
 
     // Process data incrementally like Ruby version does
-    let rawData = [];
-    rawData = this.dataProcessor.processRawData(leftData, rawData);
-    rawData = this.dataProcessor.processRawData(rightData, rawData);
-    
+    let rawData = []
+    rawData = this.dataProcessor.processRawData(leftData, rawData)
+    rawData = this.dataProcessor.processRawData(rightData, rawData)
+
     // Now process the text formatting
-    const processedData = await this.dataProcessor.processExtractedData(rawData);
+    const processedData = await this.dataProcessor.processExtractedData(rawData)
 
     // Generate outputs
-    await this.generateOutputs(processedData, paddedPage);
+    await this.generateOutputs(processedData, paddedPage)
 
-    console.log(`Page ${paddedPage} completed`);
-    return processedData;
+    console.log(`Page ${paddedPage} completed`)
+    return processedData
   }
 
   async processColumn(imagePath, pageNum, column) {
-    const paddedPage = padPageNumber(pageNum);
-    const rangesFile = `${this.outputDir}/${paddedPage}-${column}.txt`;
-    const dataFile = `${this.outputDir}/${paddedPage}-${column}.json`;
+    const paddedPage = padPageNumber(pageNum)
+    const rangesFile = `${this.outputDir}/${paddedPage}-${column}.txt`
+    const dataFile = `${this.outputDir}/${paddedPage}-${column}.json`
 
     // Check if already processed
     if (await fileExists(dataFile)) {
-      const content = await fs.readFile(dataFile, 'utf8');
-      const data = JSON.parse(content);
-      
+      const content = await fs.readFile(dataFile, 'utf8')
+      const data = JSON.parse(content)
+
       // Also need to load ranges if they exist
-      let ranges = [];
+      let ranges = []
       if (await fileExists(rangesFile)) {
-        const rangesContent = await fs.readFile(rangesFile, 'utf8');
-        ranges = rangesContent.trim().split('\n').map(line => {
-          const [start, end] = line.split(' ').map(Number);
-          return [start, end];
-        });
+        const rangesContent = await fs.readFile(rangesFile, 'utf8')
+        ranges = rangesContent
+          .trim()
+          .split('\n')
+          .map(line => {
+            const [start, end] = line.split(' ').map(Number)
+            return [start, end]
+          })
       }
-      
-      return { data: data, ranges: ranges };
+
+      return { data: data, ranges: ranges }
     }
 
-    let ranges;
+    let ranges
 
     // Get or detect ranges
     if (await fileExists(rangesFile)) {
-      const rangesContent = await fs.readFile(rangesFile, 'utf8');
-      ranges = rangesContent.trim().split('\n').map(line => {
-        const [start, end] = line.split(' ').map(Number);
-        return [start, end];
-      });
+      const rangesContent = await fs.readFile(rangesFile, 'utf8')
+      ranges = rangesContent
+        .trim()
+        .split('\n')
+        .map(line => {
+          const [start, end] = line.split(' ').map(Number)
+          return [start, end]
+        })
     } else {
-      console.log(`${paddedPage}: Figuring out ranges for column ${column}...`);
-      
+      console.log(`${paddedPage}: Figuring out ranges for column ${column}...`)
+
       // Get raw pixel data for analysis
-      const { data: pixelBuffer, info: pixelInfo } = await this.imageProcessor.getColumnRawPixels(imagePath, pageNum, column);
-      
+      const { data: pixelBuffer, info: pixelInfo } = await this.imageProcessor.getColumnRawPixels(
+        imagePath,
+        pageNum,
+        column,
+      )
+
       // Detect breaks
-      ranges = this.breakDetector.detectBreaks(pixelBuffer, pixelInfo, pageNum, column);
-      
+      ranges = this.breakDetector.detectBreaks(pixelBuffer, pixelInfo, pageNum, column)
+
       // Save ranges
-      await fs.writeFile(rangesFile, ranges.map(r => r.join(' ')).join('\n'));
+      await fs.writeFile(rangesFile, ranges.map(r => r.join(' ')).join('\n'))
     }
 
     // Extract text from ranges
-    console.log(`${paddedPage}: Extracting text from column ${column}...`);
-    const extractedData = await this.textExtractor.extractFromRanges(pageNum, ranges, column);
+    console.log(`${paddedPage}: Extracting text from column ${column}...`)
+    const extractedData = await this.textExtractor.extractFromRanges(pageNum, ranges, column)
 
     // Create cropped images for each region
-    await this.createCroppedImages(imagePath, pageNum, ranges, column);
+    await this.createCroppedImages(imagePath, pageNum, ranges, column)
 
     // Save extracted data
-    await this.textExtractor.saveExtractedData(extractedData, dataFile);
+    await this.textExtractor.saveExtractedData(extractedData, dataFile)
 
-    return { data: extractedData, ranges: ranges };
+    return { data: extractedData, ranges: ranges }
   }
 
   async createCombinedAnnotation(imagePath, pageNum, leftRanges, rightRanges) {
-    const paddedPage = padPageNumber(pageNum);
-    const annotPath = `${this.outputDir}/${paddedPage}-annot.png`;
+    const paddedPage = padPageNumber(pageNum)
+    const annotPath = `${this.outputDir}/${paddedPage}-annot.png`
 
     // Skip if annotation already exists
     if (await fileExists(annotPath)) {
-      return;
+      return
     }
 
-    console.log(`${paddedPage}: Creating annotation...`);
+    console.log(`${paddedPage}: Creating annotation...`)
 
     // Create rectangles for left column
     const leftRectangles = leftRanges.map(([y0, y1]) => ({
       x0: CONFIG.LEFT_COLUMN.CROP_X,
       y0: CONFIG.Y_OFFSET + y0,
       x1: CONFIG.LEFT_COLUMN.FULL_WIDTH,
-      y1: CONFIG.Y_OFFSET + y1
-    }));
+      y1: CONFIG.Y_OFFSET + y1,
+    }))
 
     // Create rectangles for right column
     const rightRectangles = rightRanges.map(([y0, y1]) => ({
       x0: CONFIG.RIGHT_COLUMN.CROP_X,
       y0: CONFIG.Y_OFFSET + y0,
       x1: CONFIG.RIGHT_COLUMN.FULL_WIDTH,
-      y1: CONFIG.Y_OFFSET + y1
-    }));
+      y1: CONFIG.Y_OFFSET + y1,
+    }))
 
     // Combine all rectangles and annotate in one operation
-    const allRectangles = [...leftRectangles, ...rightRectangles];
-    await this.imageProcessor.annotateImage(imagePath, annotPath, allRectangles);
+    const allRectangles = [...leftRectangles, ...rightRectangles]
+    await this.imageProcessor.annotateImage(imagePath, annotPath, allRectangles)
   }
 
   async createCroppedImages(imagePath, pageNum, ranges, column) {
-    const paddedPage = padPageNumber(pageNum);
-    const columnConfig = column === 'l' ? CONFIG.LEFT_COLUMN : CONFIG.RIGHT_COLUMN;
+    const paddedPage = padPageNumber(pageNum)
+    const columnConfig = column === 'l' ? CONFIG.LEFT_COLUMN : CONFIG.RIGHT_COLUMN
 
     for (let i = 0; i < ranges.length; i++) {
-      const [y0, y1] = ranges[i];
-      const outputPath = `${this.outputDir}/${paddedPage}-${column}-${i}.png`;
+      const [y0, y1] = ranges[i]
+      const outputPath = `${this.outputDir}/${paddedPage}-${column}-${i}.png`
 
       // Skip if already exists
       if (await fileExists(outputPath)) {
-        continue;
+        continue
       }
 
-      const cropWidth = columnConfig.CROP_WIDTH;
-      const cropHeight = y1 - y0;
-      const cropX = columnConfig.CROP_X;
-      const cropY = CONFIG.Y_OFFSET + y0;
+      const cropWidth = columnConfig.CROP_WIDTH
+      const cropHeight = y1 - y0
+      const cropX = columnConfig.CROP_X
+      const cropY = CONFIG.Y_OFFSET + y0
 
       await this.imageProcessor.cropRegion(
-        imagePath, cropX, cropY, cropWidth, cropHeight, outputPath
-      );
+        imagePath,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        outputPath,
+      )
     }
   }
 
   async generateOutputs(data, page) {
-    const htmlFile = `${this.outputDir}/${page}.html`;
-    const csvFile = `${this.outputDir}/${page}.csv`;
+    const htmlFile = `${this.outputDir}/${page}.html`
+    const csvFile = `${this.outputDir}/${page}.csv`
 
     // Skip if outputs already exist
-    if (await fileExists(htmlFile) && await fileExists(csvFile)) {
-      return;
+    if ((await fileExists(htmlFile)) && (await fileExists(csvFile))) {
+      return
     }
 
-    console.log(`${page}: Generating outputs...`);
+    console.log(`${page}: Generating outputs...`)
 
-    const html = await this.dataProcessor.generateHTML(data, page);
-    const csv = await this.dataProcessor.generateCSV(data, page);
+    const html = await this.dataProcessor.generateHTML(data, page)
+    const csv = await this.dataProcessor.generateCSV(data, page)
 
-    await fs.writeFile(htmlFile, html);
-    await fs.writeFile(csvFile, csv);
+    await fs.writeFile(htmlFile, html)
+    await fs.writeFile(csvFile, csv)
   }
 }

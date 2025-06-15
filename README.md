@@ -15,7 +15,7 @@ This is a complete Node.js 22 refactor of the original Ruby-based Goethe B1 Wort
 - Node.js 22 or higher
 - System dependencies:
   - `pdftocairo` (from poppler-utils)
-  - `pdftotext` (from poppler-utils) 
+  - `pdftotext` (from poppler-utils)
   - `convert` (from ImageMagick)
 
 ## Project Structure
@@ -40,6 +40,7 @@ test/                       # Test files
 ## Usage
 
 ### Process all pages (16-102):
+
 ```bash
 npm run process:all
 # or
@@ -47,23 +48,27 @@ node src/index.js --all
 ```
 
 ### Process a single page:
+
 ```bash
 npm run process:page 42
-# or  
+# or
 node src/index.js --page 42
 ```
 
 ### Run tests:
+
 ```bash
 npm test
 ```
 
 ### Clean output:
+
 ```bash
 npm run clean
 ```
 
 ### Docker usage:
+
 ```bash
 # Build the Docker image
 docker build -t goethe-b1 .
@@ -95,7 +100,7 @@ docker run --rm -it goethe-b1 bash
 All files are generated in the `output/` directory:
 
 - `output/Goethe-Zertifikat_B1_Wortliste-*.png` - Source page images
-- `output/[page]-[col]-*.png` - Cropped word regions  
+- `output/[page]-[col]-*.png` - Cropped word regions
 - `output/[page]-[col].json` - Extracted data per column
 - `output/[page]-[col].txt` - Detected break points
 - `output/[page]-annot.png` - Annotated pages
@@ -144,18 +149,21 @@ The refactor maintains 100% compatibility with the original output while providi
 ## Performance & Optimizations
 
 ### Processing Improvements
+
 - **Concurrent operations**: Break detection and text extraction run in parallel where possible
 - **Smart caching**: Individual page data is cached as JSON files to avoid reprocessing
 - **Memory efficient**: Uses streams and incremental processing for large datasets
 - **Fast file operations**: Leverages Node.js native async I/O for optimal performance
 
 ### Error Handling
+
 - **Graceful degradation**: Continues processing other pages if one fails
 - **Detailed error reporting**: Shows specific errors with page numbers and operation context
 - **Timeout protection**: Git operations and external commands have timeouts
 - **ImageMagick policy fixes**: Automatically handles Docker security policies
 
 ### Output Compatibility
+
 - **Identical CSV format**: Produces exact same output as Ruby version
 - **Same vocabulary count**: 4792 entries across all pages (16-102)
 - **Preserved text processing**: All Ruby text cleaning and formatting logic maintained
@@ -164,19 +172,23 @@ The refactor maintains 100% compatibility with the original output while providi
 ## Architecture Details
 
 ### Break Detection Algorithm
+
 The break detection uses a finite state machine that:
+
 1. **Analyzes XPM pixels**: Converts page regions to XPM format for pixel-level analysis
 2. **Detects white space gaps**: Identifies horizontal gaps of 42+ pixels between vocabulary entries
 3. **Handles overrides**: Integrates manual break points for problematic pages
 4. **State transitions**: `trail` → `look` → `found` → `trail` cycle for robust detection
 
 ### Text Processing Pipeline
+
 1. **OCR extraction**: Uses `pdftotext` with precise coordinates for each detected region
 2. **Definition formatting**: Handles German article patterns (der/die), arrow formatting
 3. **Example cleanup**: Processes numbered lists, fixes OCR errors, normalizes spacing
 4. **Cosmetic fixes**: Applies page-specific corrections for known OCR issues
 
 ### Data Flow
+
 ```
 PDF → PNG pages → XPM crops → Break detection → Text regions → OCR → Text cleanup → CSV/HTML
 ```
@@ -191,12 +203,15 @@ PDF → PNG pages → XPM crops → Break detection → Text regions → OCR →
 **Permission errors**: Docker volume mounts require proper file permissions
 
 ### Debug Mode
+
 Enable detailed logging by setting `NODE_ENV=development`:
+
 ```bash
 NODE_ENV=development node src/index.js --page 42
 ```
 
 ### Performance Monitoring
+
 Processing time per page: ~2-5 seconds
 Total processing time: ~15-20 minutes for all 87 pages
 Memory usage: ~100-200MB peak

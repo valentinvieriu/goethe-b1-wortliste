@@ -12,14 +12,40 @@
     "process:all": "node src/index.js --all",
     "process:page": "node src/index.js --page",
     "test": "node --test test/*.test.js",
-    "clean": "rm -rf output/"
+    "clean": "rm -rf output/",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint src/ test/ --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "dependencies": {
     "sharp": "^0.33.2",
     "mupdf": "^1.1.0"
   },
-  "devDependencies": {},
-  "keywords": ["german", "vocabulary", "goethe", "pdf", "extraction"],
+  "devDependencies": {
+    "eslint": "^9.28.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.0",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.5.3"
+  },
+  "keywords": [
+    "german",
+    "vocabulary",
+    "goethe",
+    "pdf",
+    "extraction"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }

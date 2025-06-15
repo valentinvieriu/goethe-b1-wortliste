@@ -1,4 +1,8 @@
+.claude
+.env.example
 .git
+.husky
+.vscode
 Goethe-Zertifikat_B1_Wortliste.pdf
-output/
 node_modules/
+output/
