@@ -188,6 +188,10 @@ node src/index.js --page 42 # Process single page
 node src/index.js --help    # Show help
 ```
 
+### GitHub Pages Deployment
+
+Every push to the `master` branch triggers a workflow that runs `npm run process:all` and publishes the generated HTML from `output/` to GitHub Pages. The workflow file lives in `.github/workflows/pages.yml`.
+
 ### Key Implementation Details
 
 **Break Detection**: Finite state machine analyzing pixel data to find vocabulary boundaries. Handles 19 page-specific override cases.
