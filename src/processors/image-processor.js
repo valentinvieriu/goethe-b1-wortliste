@@ -8,11 +8,14 @@ import { WorkerPool } from '../runtime/worker-pool.js'
  * Wrapper around Sharp that delegates heavy tasks to worker-threads.
  */
 export class ImageProcessor {
+  #pool
+  #ready
+
   constructor() {
     this.outputDir = CONFIG.OUTPUT_DIR
-    this._pool = new WorkerPool(new URL('../runtime/workers/image-worker.js', import.meta.url))
+    this.#pool = new WorkerPool(new URL('../runtime/workers/image-worker.js', import.meta.url))
     // Initialise workers in the background; methods await this._ready when needed.
-    this._ready = this._pool.ready()
+    this.#ready = this.#pool.ready()
   }
 
   /**
@@ -37,8 +40,8 @@ export class ImageProcessor {
    * Crop a rectangular region on a worker thread.
    */
   async cropRegion(imagePath, x, y, width, height, outputPath) {
-    await this._ready
-    return this._pool.exec({
+    await this.#ready
+    return this.#pool.exec({
       payload: { action: 'crop', imagePath, x, y, width, height, outputPath },
     })
   }
@@ -47,14 +50,14 @@ export class ImageProcessor {
    * Annotate an image with semi-transparent rectangles on a worker thread.
    */
   async annotateImage(imagePath, outputPath, rectangles) {
-    await this._ready
-    return this._pool.exec({
+    await this.#ready
+    return this.#pool.exec({
       payload: { action: 'annotate', imagePath, outputPath, rectangles },
     })
   }
 
   /** Release worker resources (optional). */
   async destroy() {
-    await this._pool.destroy()
+    await this.#pool?.destroy()
   }
 }

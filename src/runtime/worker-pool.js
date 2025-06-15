@@ -29,34 +29,35 @@ import { cpus } from 'node:os'
  * ```
  */
 export class WorkerPool {
+  #workerUrl
+  #size
+  #workers = []
+  #idleWorkers = []
+  #queue = []
+  #readyPromise
+  #isClosing = false
+
   /**
    * @param {URL|string} workerUrl  – Module URL/filename passed to each Worker().
    * @param {number} [size=Math.max(1,cpus().length-1)] – Number of workers.
    */
   constructor(workerUrl, size = Math.max(1, cpus().length - 1)) {
-    this._workerUrl = workerUrl
-    this._size = size
-    /** @type {Array<Worker>} */
-    this._workers = []
-    /** @type {Array<Worker>} */
-    this._idleWorkers = []
-    /** @type {Array<{ job: Required<WorkerJob>, resolve: (v: any) => void, reject: (r: any) => void, timer: NodeJS.Timeout | null }>} */
-    this._queue = []
-    /** @type {Promise<void>} */
-    this._readyPromise = this._spawnWorkers()
+    this.#workerUrl = workerUrl
+    this.#size = size
+    this.#readyPromise = this.#spawnWorkers()
   }
 
-  async _spawnWorkers() {
+  async #spawnWorkers() {
     const onlinePromises = []
-    for (let i = 0; i < this._size; i++) {
-      onlinePromises.push(this._createWorker())
+    for (let i = 0; i < this.#size; i++) {
+      onlinePromises.push(this.#createWorker())
     }
     await Promise.all(onlinePromises)
   }
 
-  _createWorker() {
+  #createWorker() {
     const { promise, resolve } = Promise.withResolvers()
-    const worker = new Worker(this._workerUrl)
+    const worker = new Worker(this.#workerUrl)
 
     const onMessage = result => {
       const task = worker.currentTask
@@ -64,7 +65,7 @@ export class WorkerPool {
       if (task.timer) clearTimeout(task.timer)
       worker.currentTask = null
       task.resolve(task.job.reviver(result))
-      this._returnWorkerToPool(worker)
+      this.#returnWorkerToPool(worker)
     }
 
     const onError = err => {
@@ -75,7 +76,7 @@ export class WorkerPool {
         worker.currentTask = null
       }
       worker.removeAllListeners()
-      this._replaceWorker(worker)
+      this.#replaceWorker(worker)
     }
 
     // Handle unexpected termination (e.g. process.exit inside worker)
@@ -89,17 +90,17 @@ export class WorkerPool {
           worker.currentTask = null
         }
         worker.removeAllListeners()
-        this._replaceWorker(worker)
+        this.#replaceWorker(worker)
       } else if (!worker.currentTask) {
         // If the worker exited gracefully while idle, simply replace it
-        this._replaceWorker(worker)
+        this.#replaceWorker(worker)
       }
     }
 
     worker.once('online', () => {
-      this._workers.push(worker)
-      this._idleWorkers.push(worker)
-      this._dispatch()
+      this.#workers.push(worker)
+      this.#idleWorkers.push(worker)
+      this.#dispatch()
       resolve()
     })
 
@@ -110,13 +111,13 @@ export class WorkerPool {
     return promise
   }
 
-  _returnWorkerToPool(worker) {
-    this._idleWorkers.push(worker)
-    this._dispatch()
+  #returnWorkerToPool(worker) {
+    this.#idleWorkers.push(worker)
+    this.#dispatch()
   }
 
-  async _replaceWorker(worker) {
-    if (this._isClosing) {
+  async #replaceWorker(worker) {
+    if (this.#isClosing) {
       // During shutdown just ensure the worker ends—no respawn, no noise
       try {
         await worker.terminate()
@@ -124,21 +125,21 @@ export class WorkerPool {
       return
     }
     console.warn(`Worker failed or timed out. Terminating and replacing...`)
-    const idx = this._workers.indexOf(worker)
-    if (idx > -1) this._workers.splice(idx, 1)
+    const idx = this.#workers.indexOf(worker)
+    if (idx > -1) this.#workers.splice(idx, 1)
 
-    const idleIdx = this._idleWorkers.indexOf(worker)
-    if (idleIdx > -1) this._idleWorkers.splice(idleIdx, 1)
+    const idleIdx = this.#idleWorkers.indexOf(worker)
+    if (idleIdx > -1) this.#idleWorkers.splice(idleIdx, 1)
 
     await worker.terminate()
-    await this._createWorker()
+    await this.#createWorker()
   }
 
-  _dispatch() {
+  #dispatch() {
     // Drain the queue onto every idle worker that is available
-    while (this._queue.length > 0 && this._idleWorkers.length > 0) {
-      const worker = this._idleWorkers.pop()
-      const task = this._queue.shift()
+    while (this.#queue.length > 0 && this.#idleWorkers.length > 0) {
+      const worker = this.#idleWorkers.pop()
+      const task = this.#queue.shift()
 
       // Allow callers to override timeout per job: pool.exec({payload, timeout: 10_000})
       const timeoutMs =
@@ -149,7 +150,7 @@ export class WorkerPool {
         worker.currentTask = null
         // The worker is now in an unknown state, replace it
         worker.removeAllListeners()
-        this._replaceWorker(worker)
+        this.#replaceWorker(worker)
       }
 
       task.timer = setTimeout(onTimeout, timeoutMs)
@@ -164,7 +165,7 @@ export class WorkerPool {
    * @returns {Promise<void>}
    */
   ready() {
-    return this._readyPromise
+    return this.#readyPromise
   }
 
   /**
@@ -178,13 +179,13 @@ export class WorkerPool {
   exec(job) {
     /** @type {Required<WorkerJob>} */
     const normalizedJob =
-      typeof job === 'object' && job.payload !== undefined
+      job && typeof job === 'object' && Object.hasOwn(job, 'payload')
         ? { reviver: v => v, ...job }
         : { payload: job, reviver: v => v }
 
     return new Promise((resolve, reject) => {
-      this._queue.push({ job: normalizedJob, resolve, reject, timer: null })
-      this._dispatch()
+      this.#queue.push({ job: normalizedJob, resolve, reject, timer: null })
+      this.#dispatch()
     })
   }
 
@@ -193,22 +194,22 @@ export class WorkerPool {
    * @returns {Promise<void>}
    */
   async destroy() {
-    this._isClosing = true
+    this.#isClosing = true
     // Fail fast for any tasks that never made it to a worker
-    for (const pending of this._queue) {
+    for (const pending of this.#queue) {
       if (pending.timer) clearTimeout(pending.timer)
       pending.reject(new Error('Worker pool destroyed before task execution'))
     }
-    this._queue = []
+    this.#queue = []
 
     // Detach listeners so onExit/onError won’t spawn new workers
     await Promise.all(
-      this._workers.map(async w => {
+      this.#workers.map(async w => {
         w.removeAllListeners()
         await w.terminate()
       }),
     )
-    this._workers = []
-    this._idleWorkers = []
+    this.#workers = []
+    this.#idleWorkers = []
   }
 }

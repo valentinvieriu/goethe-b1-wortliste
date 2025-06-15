@@ -18,18 +18,19 @@ function generatePngFilename(pageNum) {
  * Converts the Goethe B1 PDF pages to PNG using worker-threads.
  */
 export class PDFConverter {
+  #doc = null // lazily opened for page-count only
+
   constructor() {
     this.pdfFile = CONFIG.PDF_FILE
     this.outputDir = CONFIG.OUTPUT_DIR
-    this._doc = null // lazily opened for page-count only
   }
 
   /** @private */
-  async _getDocument() {
-    if (this._doc) return this._doc
+  async #getDocument() {
+    if (this.#doc) return this.#doc
     const buf = await fs.readFile(this.pdfFile)
-    this._doc = mupdf.PDFDocument.openDocument(buf, 'application/pdf')
-    return this._doc
+    this.#doc = mupdf.PDFDocument.openDocument(buf, 'application/pdf')
+    return this.#doc
   }
 
   /**
@@ -50,7 +51,7 @@ export class PDFConverter {
     }
 
     // Determine which pages are still needed.
-    const doc = await this._getDocument()
+    const doc = await this.#getDocument()
     const pageCount = doc.countPages()
     const pagesTodo = []
     for (let i = CONFIG.PAGE_START; i <= Math.min(CONFIG.PAGE_END, pageCount); i++) {

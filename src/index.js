@@ -10,13 +10,17 @@ import { DataProcessor } from './processors/data-processor.js'
 import { fileExists } from './utils/fs.js'
 
 export class GoetheBrListProcessor {
+  #pdfConverter
+  #pageProcessor
+  #dataProcessor
+
   /**
    * Main orchestrator for processing the entire Wortliste.
    */
   constructor() {
-    this.pdfConverter = new PDFConverter()
-    this.pageProcessor = new PageProcessor()
-    this.dataProcessor = new DataProcessor()
+    this.#pdfConverter = new PDFConverter()
+    this.#pageProcessor = new PageProcessor()
+    this.#dataProcessor = new DataProcessor()
   }
 
   /**
@@ -64,7 +68,7 @@ export class GoetheBrListProcessor {
     await fs.mkdir(CONFIG.OUTPUT_DIR, { recursive: true })
 
     // Render PNGs if necessary
-    await this.pdfConverter.convertPDFToPNG()
+    await this.#pdfConverter.convertPDFToPNG()
 
     const cpuCount = Math.max(1, cpus().length)
     console.log(`Processing pages in parallel (concurrency = ${cpuCount})…`)
@@ -75,7 +79,7 @@ export class GoetheBrListProcessor {
     // Process all pages in parallel, creating intermediate files
     await this.runWithConcurrency(pageNumbers, cpuCount, async pageNum => {
       try {
-        await this.pageProcessor.processPage(pageNum)
+        await this.#pageProcessor.processPage(pageNum)
       } catch (err) {
         console.error(`Error processing page ${pageNum}:`, err.message)
       }
@@ -91,11 +95,11 @@ export class GoetheBrListProcessor {
 
       if (await fileExists(leftFile)) {
         const leftData = JSON.parse(await fs.readFile(leftFile, 'utf8'))
-        allRawData = this.dataProcessor.processRawData(leftData, allRawData)
+        allRawData = this.#dataProcessor.processRawData(leftData, allRawData)
       }
       if (await fileExists(rightFile)) {
         const rightData = JSON.parse(await fs.readFile(rightFile, 'utf8'))
-        allRawData = this.dataProcessor.processRawData(rightData, allRawData)
+        allRawData = this.#dataProcessor.processRawData(rightData, allRawData)
       }
     }
 
@@ -127,10 +131,10 @@ export class GoetheBrListProcessor {
     await fs.mkdir(CONFIG.OUTPUT_DIR, { recursive: true })
 
     // Convert PDF to PNG if needed
-    await this.pdfConverter.convertPDFToPNG()
+    await this.#pdfConverter.convertPDFToPNG()
 
     // Process the specific page
-    await this.pageProcessor.processPage(pageNum)
+    await this.#pageProcessor.processPage(pageNum)
 
     // Clean up resources so Node can exit cleanly
     await this.destroy()
@@ -145,8 +149,8 @@ export class GoetheBrListProcessor {
    * @returns {Promise<void>}
    */
   async generateCombinedOutputs(allRawData) {
-    const processedData = await this.dataProcessor.processExtractedData(allRawData)
-    const csv = await this.dataProcessor.generateCSV(processedData, 'all')
+    const processedData = await this.#dataProcessor.processExtractedData(allRawData)
+    const csv = await this.#dataProcessor.generateCSV(processedData, 'all')
 
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv)
 
@@ -164,9 +168,7 @@ export class GoetheBrListProcessor {
    * @returns {Promise<void>}
    */
   async destroy() {
-    if (this.pageProcessor && typeof this.pageProcessor.destroy === 'function') {
-      await this.pageProcessor.destroy()
-    }
+    await this.#pageProcessor?.destroy()
   }
 
   /**

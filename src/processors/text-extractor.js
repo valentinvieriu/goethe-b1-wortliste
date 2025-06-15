@@ -9,25 +9,26 @@ import { CONFIG } from '../config.js'
  * from the PDF's internal representation, which is faster and more accurate.
  */
 export class TextExtractor {
+  #docPromise = null
+
   /**
    * Creates a new text extractor instance.
    */
   constructor() {
     this.pdfFile = CONFIG.PDF_FILE
-    this._doc = null // Loaded lazily
   }
 
   /**
-   * Lazily loads the PDF document using MuPDF.js and caches the instance
+   * Lazily loads the PDF document using MuPDF.js and caches the promise
    * to avoid re-loading the file for subsequent extractions.
    * @private
    * @returns {Promise<mupdf.PDFDocument>} A promise that resolves to the loaded document instance.
    */
-  async _docPromise() {
-    if (this._doc) return this._doc
-    const buffer = await fs.readFile(this.pdfFile)
-    this._doc = mupdf.PDFDocument.openDocument(buffer, 'application/pdf')
-    return this._doc
+  #getDocPromise() {
+    this.#docPromise ??= fs
+      .readFile(this.pdfFile)
+      .then(buffer => mupdf.PDFDocument.openDocument(buffer, 'application/pdf'))
+    return this.#docPromise
   }
 
   /**
@@ -47,7 +48,7 @@ export class TextExtractor {
     // MuPDF StructuredText works in PDF points (72 dpi);
     // pipeline coordinates are in image pixels (CONFIG.PDF_DPI).
     const scale = CONFIG.PDF_DPI / 72 // ≈ 4.166 for 300 dpi
-    const doc = await this._docPromise()
+    const doc = await this.#getDocPromise()
     const page = doc.loadPage(pageNum - 1)
     const st = JSON.parse(page.toStructuredText('preserve-whitespace').asJSON())
 

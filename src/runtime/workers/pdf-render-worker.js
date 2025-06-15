@@ -3,30 +3,25 @@ import { parentPort } from 'node:worker_threads'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { CONFIG } from '../../config.js'
-import { padPageNumber } from '../../utils/fs.js'
+import { fileExists, padPageNumber } from '../../utils/fs.js'
 
 function genName(page) {
   return `${path.basename(CONFIG.PDF_FILE, '.pdf')}-${padPageNumber(page)}.png`
 }
 
-let doc // cached across jobs
+let docPromise // cached across jobs
 
-async function ensureDoc() {
-  if (doc) return doc
-  const buf = await fs.readFile(CONFIG.PDF_FILE)
-  doc = mupdf.PDFDocument.openDocument(buf, 'application/pdf')
-  return doc
+function ensureDoc() {
+  docPromise ??= fs
+    .readFile(CONFIG.PDF_FILE)
+    .then(buf => mupdf.PDFDocument.openDocument(buf, 'application/pdf'))
+  return docPromise
 }
 
 parentPort.on('message', async ({ pageNum }) => {
   try {
     const outPath = path.join(CONFIG.OUTPUT_DIR, genName(pageNum))
-    if (
-      await fs
-        .access(outPath)
-        .then(() => true)
-        .catch(() => false)
-    ) {
+    if (await fileExists(outPath)) {
       parentPort.postMessage(outPath)
       return
     }

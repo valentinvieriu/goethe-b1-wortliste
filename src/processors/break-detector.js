@@ -37,7 +37,7 @@ export class BreakDetector {
     const ranges = []
 
     // Get overrides for this prefix
-    const overrides = BREAK_OVERRIDES[prefix] || new Set()
+    const overrides = BREAK_OVERRIDES[prefix] ?? new Set()
 
     // Iterate through each row of pixels
     for (y = 0; y < height; y++) {

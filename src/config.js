@@ -6,7 +6,7 @@
  * @returns {string} The value of the environment variable or the default.
  */
 function getEnvVar(name, defaultValue = '') {
-  return process.env[name] || defaultValue
+  return process.env[name] ?? defaultValue
 }
 
 /**

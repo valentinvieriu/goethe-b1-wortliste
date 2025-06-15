@@ -28,8 +28,8 @@ export class DataProcessor {
 
       if (definition === '' && buf.length > 0) {
         // Merge with previous entry
-        const prevItem = buf[buf.length - 1]
-        prevItem.example = prevItem.example + '\n' + example
+        const prevItem = buf.at(-1)
+        prevItem.example += '\n' + example
       } else {
         buf.push({
           definition: definition,

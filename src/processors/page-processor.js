@@ -15,16 +15,23 @@ import { fileExists, padPageNumber } from '../utils/fs.js'
  * intermediate results to speed up reprocessing.
  */
 export class PageProcessor {
+  #pdfConverter
+  #imageProcessor
+  #breakDetector
+  #textExtractor
+  #dataProcessor
+  #outputDir
+
   /**
    * Initializes all necessary processor modules.
    */
   constructor() {
-    this.pdfConverter = new PDFConverter()
-    this.imageProcessor = new ImageProcessor()
-    this.breakDetector = new BreakDetector()
-    this.textExtractor = new TextExtractor()
-    this.dataProcessor = new DataProcessor()
-    this.outputDir = CONFIG.OUTPUT_DIR
+    this.#pdfConverter = new PDFConverter()
+    this.#imageProcessor = new ImageProcessor()
+    this.#breakDetector = new BreakDetector()
+    this.#textExtractor = new TextExtractor()
+    this.#dataProcessor = new DataProcessor()
+    this.#outputDir = CONFIG.OUTPUT_DIR
   }
 
   /**
@@ -39,10 +46,10 @@ export class PageProcessor {
     console.log(`Processing page ${paddedPage}...`)
 
     // Ensure output directory exists
-    await fs.mkdir(this.outputDir, { recursive: true })
+    await fs.mkdir(this.#outputDir, { recursive: true })
 
     // Get page image path
-    const imagePath = await this.pdfConverter.getPageImagePath(pageNum)
+    const imagePath = await this.#pdfConverter.getPageImagePath(pageNum)
 
     // Process both columns (without annotation)
     const { data: leftData, ranges: leftRanges } = await this.processColumn(imagePath, pageNum, 'l')
@@ -57,11 +64,11 @@ export class PageProcessor {
 
     // Process data incrementally like Ruby version does
     let rawData = []
-    rawData = this.dataProcessor.processRawData(leftData, rawData)
-    rawData = this.dataProcessor.processRawData(rightData, rawData)
+    rawData = this.#dataProcessor.processRawData(leftData, rawData)
+    rawData = this.#dataProcessor.processRawData(rightData, rawData)
 
     // Now process the text formatting
-    const processedData = await this.dataProcessor.processExtractedData(rawData)
+    const processedData = await this.#dataProcessor.processExtractedData(rawData)
 
     // Generate outputs
     await this.generateOutputs(processedData, paddedPage)
@@ -82,8 +89,8 @@ export class PageProcessor {
    */
   async processColumn(imagePath, pageNum, column) {
     const paddedPage = padPageNumber(pageNum)
-    const rangesFile = `${this.outputDir}/${paddedPage}-${column}.txt`
-    const dataFile = `${this.outputDir}/${paddedPage}-${column}.json`
+    const rangesFile = `${this.#outputDir}/${paddedPage}-${column}.txt`
+    const dataFile = `${this.#outputDir}/${paddedPage}-${column}.json`
 
     // Check if already processed
     if (await fileExists(dataFile)) {
@@ -122,14 +129,14 @@ export class PageProcessor {
       console.log(`${paddedPage}: Figuring out ranges for column ${column}...`)
 
       // Get raw pixel data for analysis
-      const { data: pixelBuffer, info: pixelInfo } = await this.imageProcessor.getColumnRawPixels(
+      const { data: pixelBuffer, info: pixelInfo } = await this.#imageProcessor.getColumnRawPixels(
         imagePath,
         pageNum,
         column,
       )
 
       // Detect breaks
-      ranges = this.breakDetector.detectBreaks(pixelBuffer, pixelInfo, pageNum, column)
+      ranges = this.#breakDetector.detectBreaks(pixelBuffer, pixelInfo, pageNum, column)
 
       // Save ranges
       await fs.writeFile(rangesFile, ranges.map(r => r.join(' ')).join('\n'))
@@ -137,13 +144,13 @@ export class PageProcessor {
 
     // Extract text from ranges
     console.log(`${paddedPage}: Extracting text from column ${column}...`)
-    const extractedData = await this.textExtractor.extractFromRanges(pageNum, ranges, column)
+    const extractedData = await this.#textExtractor.extractFromRanges(pageNum, ranges, column)
 
     // Create cropped images for each region
     await this.createCroppedImages(imagePath, pageNum, ranges, column)
 
     // Save extracted data
-    await this.textExtractor.saveExtractedData(extractedData, dataFile)
+    await this.#textExtractor.saveExtractedData(extractedData, dataFile)
 
     return { data: extractedData, ranges: ranges }
   }
@@ -160,7 +167,7 @@ export class PageProcessor {
    */
   async createCombinedAnnotation(imagePath, pageNum, leftRanges, rightRanges) {
     const paddedPage = padPageNumber(pageNum)
-    const annotPath = `${this.outputDir}/${paddedPage}-annot.png`
+    const annotPath = `${this.#outputDir}/${paddedPage}-annot.png`
 
     // Skip if annotation already exists
     if (await fileExists(annotPath)) {
@@ -187,7 +194,7 @@ export class PageProcessor {
 
     // Combine all rectangles and annotate in one operation
     const allRectangles = [...leftRectangles, ...rightRectangles]
-    await this.imageProcessor.annotateImage(imagePath, annotPath, allRectangles)
+    await this.#imageProcessor.annotateImage(imagePath, annotPath, allRectangles)
   }
 
   /**
@@ -206,7 +213,7 @@ export class PageProcessor {
 
     for (let i = 0; i < ranges.length; i++) {
       const [y0, y1] = ranges[i]
-      const outputPath = `${this.outputDir}/${paddedPage}-${column}-${i}.png`
+      const outputPath = `${this.#outputDir}/${paddedPage}-${column}-${i}.png`
 
       // Skip if already exists
       if (await fileExists(outputPath)) {
@@ -218,7 +225,7 @@ export class PageProcessor {
       const cropX = columnConfig.CROP_X
       const cropY = CONFIG.Y_OFFSET + y0
 
-      await this.imageProcessor.cropRegion(
+      await this.#imageProcessor.cropRegion(
         imagePath,
         cropX,
         cropY,
@@ -238,7 +245,7 @@ export class PageProcessor {
    * @returns {Promise<void>} A promise that resolves when the file has been written.
    */
   async generateOutputs(data, page) {
-    const csvFile = `${this.outputDir}/${page}.csv`
+    const csvFile = `${this.#outputDir}/${page}.csv`
 
     // Skip if output already exists
     if (await fileExists(csvFile)) {
@@ -247,7 +254,7 @@ export class PageProcessor {
 
     console.log(`${page}: Generating CSV output...`)
 
-    const csv = await this.dataProcessor.generateCSV(data, page)
+    const csv = await this.#dataProcessor.generateCSV(data, page)
     await fs.writeFile(csvFile, csv)
   }
 
@@ -257,6 +264,6 @@ export class PageProcessor {
    * @returns {Promise<void>}
    */
   async destroy() {
-    await this.imageProcessor.destroy()
+    await this.#imageProcessor?.destroy()
   }
 }
