@@ -17,6 +17,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Download PDF
+        run: |
+          curl -L -o Goethe-Zertifikat_B1_Wortliste.pdf \
+            "https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf" || \
+          curl -L -o Goethe-Zertifikat_B1_Wortliste.pdf \
+            "https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf"
       - name: Install dependencies
         run: npm ci
       - name: Generate HTML
