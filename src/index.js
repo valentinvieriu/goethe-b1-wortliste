@@ -8,7 +8,7 @@ import { PageProcessor } from './processors/page-processor.js';
 import { DataProcessor } from './processors/data-processor.js';
 import { fileExists } from './utils/fs.js';
 
-class GoetheBrListProcessor {
+export class GoetheBrListProcessor {
   constructor() {
     this.pdfConverter = new PDFConverter();
     this.pageProcessor = new PageProcessor();
@@ -43,14 +43,12 @@ class GoetheBrListProcessor {
    * Concurrency is capped at the number of detected CPU cores.
    */
   async processAll() {
-    console.log('Starting Goethe B1 Wortliste processing…');
+    console.log('Starting Goethe B1 Wortliste processing...');
 
-    // Check PDF presence
+    // Check if PDF exists
     if (!(await fileExists(CONFIG.PDF_FILE))) {
-      console.error(`PDF file not found: ${CONFIG.PDF_FILE}`);
-      console.error('Get yourself Goethe-Zertifikat_B1_Wortliste.pdf');
-      console.error('It used to live at https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf');
-      process.exit(1);
+      const message = `PDF file not found: ${CONFIG.PDF_FILE}\nGet yourself Goethe-Zertifikat_B1_Wortliste.pdf\nIt used to live at https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf`;
+      throw new Error(message);
     }
 
     // Ensure output directory exists
@@ -99,26 +97,24 @@ class GoetheBrListProcessor {
   async processPage(pageNum) {
     console.log(`Processing single page: ${pageNum}`);
 
+    // Check if PDF exists
     if (!(await fileExists(CONFIG.PDF_FILE))) {
-      console.error(`PDF file not found: ${CONFIG.PDF_FILE}`);
-      process.exit(1);
+      throw new Error(`PDF file not found: ${CONFIG.PDF_FILE}`);
     }
 
+    // Ensure output directory exists
     await fs.mkdir(CONFIG.OUTPUT_DIR, { recursive: true });
+
+    // Convert PDF to PNG if needed
     await this.pdfConverter.convertPDFToPNG();
 
-    try {
-      await this.pageProcessor.processPage(pageNum);
-      console.log(`Page ${pageNum} processed successfully!`);
-    } catch (err) {
-      console.error(`Error processing page ${pageNum}:`, err.message);
-      process.exit(1);
-    }
+    // Process the specific page
+    await this.pageProcessor.processPage(pageNum);
+    console.log(`Page ${pageNum} processed successfully!`);
   }
 
-  async generateCombinedOutputs(allData) {
-    const processedData = await this.dataProcessor.processExtractedData(allData);
-
+  async generateCombinedOutputs(allRawData) {
+    const processedData = await this.dataProcessor.processExtractedData(allRawData);
     const html = await this.dataProcessor.generateHTML(processedData, 'all');
     const csv  = await this.dataProcessor.generateCSV(processedData, 'all');
 
