@@ -13,7 +13,7 @@ docker-compose run --rm goethe-b1
 # Process a single page
 PAGE=42 docker-compose --profile page run --rm goethe-b1-page
 
-# Run tests
+# Run tests (full suite)
 docker-compose --profile test run --rm goethe-b1-test
 ```
 
@@ -31,6 +31,8 @@ npm run process:page 42
 
 # Run tests
 npm test
+# Quick smoke tests (CI)
+npm run test:ci
 ```
 
 ## 📋 Overview
@@ -177,6 +179,7 @@ npm run clean               # Clean output directory
 
 # Testing & Quality
 npm test                    # Run test suite
+npm run test:ci             # Lighter tests for CI
 npm run lint               # Run ESLint
 npm run lint:fix           # Fix linting issues
 npm run format             # Format with Prettier

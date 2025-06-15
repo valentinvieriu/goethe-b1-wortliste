@@ -1,14 +1,36 @@
-// Load environment variables
+/**
+ * Read an environment variable and provide a default value if it is not set.
+ *
+ * @param {string} name - Name of the variable to read.
+ * @param {string} [defaultValue=''] - Value returned when the variable is undefined.
+ * @returns {string} The value of the environment variable or the default.
+ */
 function getEnvVar(name, defaultValue = '') {
   return process.env[name] || defaultValue
 }
 
+/**
+ * Read a boolean environment variable.
+ *
+ * The variable is considered `true` when it exists and equals `"true"`
+ * case-insensitively.
+ *
+ * @param {string} name - Name of the variable to read.
+ * @param {boolean} [defaultValue=false] - Value returned when variable is undefined.
+ * @returns {boolean} Parsed boolean value.
+ */
 function getEnvBool(name, defaultValue = false) {
   const value = process.env[name]
   if (value === undefined) return defaultValue
   return value.toLowerCase() === 'true'
 }
 
+/**
+ * Global configuration object derived from environment variables.
+ *
+ * It defines page layout constants, default file paths and URLs as well
+ * as break-detection parameters used throughout the processing pipeline.
+ */
 export const CONFIG = {
   // Environment variables
   DEBUG: getEnvBool('DEBUG', false),
@@ -56,6 +78,12 @@ export const CONFIG = {
 }
 
 // Manual break overrides for specific pages
+/**
+ * Manual break overrides for problematic pages.
+ *
+ * The keys are "page-column" prefixes (e.g. "022-l") and each value is a
+ * set of Y coordinates where a break should be forced.
+ */
 export const BREAK_OVERRIDES = {
   '022-l': new Set([118]),
   '026-l': new Set([348]),

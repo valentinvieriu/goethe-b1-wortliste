@@ -15,6 +15,8 @@ describe(
   {
     // Longer timeout for processing a page, especially on slower machines or in CI
     timeout: 60000,
+    // Skip this integration test when running a light test suite (e.g. in CI)
+    skip: process.env.LIGHT_TESTS === 'true' || process.env.LIGHT_TESTS === '1',
   },
   () => {
     before(async t => {
