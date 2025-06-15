@@ -1,0 +1,84 @@
+services:
+  goethe-b1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass environment variables to build stage
+        - PDF_FILENAME=${PDF_FILENAME:-Goethe-Zertifikat_B1_Wortliste.pdf}
+        - PDF_URL=${PDF_URL:-https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf}
+        - PDF_URL_FALLBACK=${PDF_URL_FALLBACK:-https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf}
+        - DEBUG=${DEBUG:-false}
+    image: goethe-b1-wortliste:latest
+    container_name: goethe-b1-processor
+    environment:
+      # Runtime environment variables
+      - NODE_ENV=production
+      - PDF_FILENAME=${PDF_FILENAME:-Goethe-Zertifikat_B1_Wortliste.pdf}
+      - PDF_URL=${PDF_URL:-https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf}
+      - PDF_URL_FALLBACK=${PDF_URL_FALLBACK:-https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf}
+      - DEBUG=${DEBUG:-false}
+    volumes:
+      # Mount output directory to persist results
+      - ./output:/app/output
+      # Optionally mount a custom PDF file
+      - type: bind
+        source: ${CUSTOM_PDF_PATH:-/dev/null}
+        target: /app/custom.pdf
+        bind:
+          create_host_path: false
+    env_file:
+      # Load environment variables from .env file if it exists
+      - .env
+    command: ["node", "src/index.js", "--all"]
+    profiles:
+      - default
+
+  # Development service with tests enabled
+  goethe-b1-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Stop at builder stage to include dev dependencies
+      args:
+        - PDF_FILENAME=${PDF_FILENAME:-Goethe-Zertifikat_B1_Wortliste.pdf}
+        - PDF_URL=${PDF_URL:-https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf}
+        - PDF_URL_FALLBACK=${PDF_URL_FALLBACK:-https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf}
+        - DEBUG=${DEBUG:-true}
+    image: goethe-b1-wortliste:dev
+    container_name: goethe-b1-dev
+    environment:
+      - NODE_ENV=development
+      - PDF_FILENAME=${PDF_FILENAME:-Goethe-Zertifikat_B1_Wortliste.pdf}
+      - DEBUG=${DEBUG:-true}
+    volumes:
+      - .:/app
+      - /app/node_modules  # Prevent overriding container's node_modules
+    env_file:
+      - .env
+    command: ["tail", "-f", "/dev/null"]  # Keep container running for development
+    profiles:
+      - dev
+
+  # Service for processing a single page
+  goethe-b1-page:
+    extends:
+      service: goethe-b1
+    container_name: goethe-b1-page-processor
+    command: ["node", "src/index.js", "--page", "${PAGE:-42}"]
+    profiles:
+      - page
+
+  # Service for testing
+  goethe-b1-test:
+    extends:
+      service: goethe-b1-dev
+    container_name: goethe-b1-test
+    command: ["npm", "test"]
+    profiles:
+      - test
+
+volumes:
+  # Named volume for persistent output
+  goethe_output:
+    driver: local

@@ -1,8 +1,25 @@
-.claude
-.env.example
-.git
-.husky
-.vscode
-Goethe-Zertifikat_B1_Wortliste.pdf
+# Development files
+.claude/
+.git/
+.husky/
+.vscode/
 node_modules/
 output/
+
+# Documentation and config files not needed in container
+README.md
+AGENTS.md
+*.md
+
+# Environment files (we copy .env.example explicitly)
+.env
+
+# Test files (not needed in production)
+test/
+
+# PDF files (downloaded during build)
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
