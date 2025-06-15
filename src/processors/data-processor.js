@@ -260,72 +260,133 @@ export class DataProcessor {
     const isAllPages = page === 'all'
     const pageTitle = isAllPages ? 'Pages 16..102' : `Page ${parseInt(page)}`
 
-    let html = `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width" />
-<title>${pageTitle} :: Goethe Zertifikat B1 Wortliste</title>
-<style>
-      table { border: 2px solid black; border-collapse: collapse; }
-      table th { border: 1px solid #aaa; padding: 0.2em 0.5em; }
-      table th:not([colspan]) { border-bottom: 2px solid black; }
-      table td { text-align: left; border: 1px solid #aaa; padding: 0.2em 0.5em; }
-      p { max-width: 800px; }
-</style>
-</head>
-<body>
-<h1>Goethe Zertifikat B1 Wortliste</h1>
-<p>Version ${gitVersion} -- generated at ${generatedAt}</p>
-<p>
-All of this text is extracted from
-<a href="${CONFIG.PDF_URL}">${CONFIG.PDF_FILE}</a>
-(© 2016 Goethe-Institut und ÖSD)
-because their PDF was unusable for making flashcards.
-</p>
-<p>
-I elaborated on <a href="https://wejn.org/2023/12/extracting-data-from-goethe-zertifikat-b1-wortliste/">the extraction process</a>
-on my blog.
-</p>
-<p>
-It is highly likely you can use this for personal purposes, but I make no claim
-that I own the resulting data. In other words: if I were you, I wouldn't go
-using this in any commercial capacity.
-</p>
-<h2>${pageTitle}</h2>
-<table>
-<tr><th>Def</th><th>Example</th></tr>`
-
-    for (const item of data) {
-      const def = item.definition.replace(/\n/g, '<br />\n')
-      const example = item.example.replace(/\n/g, '<br />\n')
-      html += `<tr><td>${def}</td><td>${example}</td></tr>`
-    }
+    let prevPageStr = ''
+    let nextPageStr = ''
 
     if (!isAllPages) {
       const pageNum = parseInt(page)
       const prevPage = pageNum - 1
       const nextPage = pageNum + 1
 
-      html += '<tr>'
-      if (pageNum === 16) {
-        html += '<th>&nbsp;</th>'
-      } else {
-        const prevPageStr = prevPage.toString().padStart(3, '0')
-        html += `<th><a href="${prevPageStr}.html">page ${prevPageStr}</a></th>`
+      if (pageNum !== 16) {
+        prevPageStr = prevPage.toString().padStart(3, '0')
       }
 
-      if (pageNum === 102) {
-        html += '<th>&nbsp;</th>'
-      } else {
-        const nextPageStr = nextPage.toString().padStart(3, '0')
-        html += `<th><a href="${nextPageStr}.html">page ${nextPageStr}</a></th>`
+      if (pageNum !== 102) {
+        nextPageStr = nextPage.toString().padStart(3, '0')
       }
-      html += '</tr>'
     }
 
-    html += `</table>
-</body>
+    const dataJson = JSON.stringify(data).replace(/</g, '\u003c')
+
+    const html =
+      `<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${pageTitle} :: Goethe Zertifikat B1 Wortliste</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="p-4">
+    <div id="app"></div>
+    <script type="application/json" id="data">${dataJson}</script>
+    <script type="module">
+      import { html, render } from 'https://unpkg.com/lit-html?module'
+
+      const data = JSON.parse(document.getElementById('data').textContent)
+      const gitVersion = '${gitVersion}'
+      const generatedAt = '${generatedAt}'
+      const pageTitle = '${pageTitle}'
+      const isAllPages = ${isAllPages}
+      const prevPageStr = '${prevPageStr}'
+      const nextPageStr = '${nextPageStr}'
+
+      let filter = ''
+
+      const update = () => {
+        const filtered = data.filter(
+          item =>
+            item.definition.toLowerCase().includes(filter) ||
+            item.example.toLowerCase().includes(filter),
+        )
+
+      const template = html\`
+          <div class="max-w-4xl mx-auto">
+            <h1 class="text-2xl font-bold mb-2">Goethe Zertifikat B1 Wortliste</h1>
+            <p>Version \${gitVersion} -- generated at \${generatedAt}</p>
+            <h2 class="text-xl font-semibold mt-4">\${pageTitle}</h2>
+            <input
+              type="text"
+              placeholder="Search..."
+              class="border p-2 my-4 w-full"
+              @input=${e => {
+                filter = e.target.value.toLowerCase()
+                update()
+              }}
+            />
+            <p class="mb-2">\${filtered.length} entries</p>
+            <table class="table-auto border-collapse w-full text-left">
+              <thead>
+                <tr>
+                  <th class="border px-2 py-1">Def</th>
+                  <th class="border px-2 py-1">Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                \${filtered.map(
+                  item =>
+                    html\`<tr>
+                      <td class="border px-2 py-1 whitespace-pre-line">\${item.definition}</td>
+                      <td class="border px-2 py-1 whitespace-pre-line">\${item.example}</td>
+                    </tr>\`,
+                )}
+                \${
+                  !isAllPages
+                    ? html\`<tr>
+                        <th class="border px-2 py-1">
+                            \${prevPageStr
+                              ? html\`<a href="\${prevPageStr}.html">page \${prevPageStr}</a>\`
+                              : html` & nbsp
+    ;`}
+                        </th>
+                        <th class="border px-2 py-1">
+                            \${nextPageStr
+                              ? html\`<a href="\${nextPageStr}.html">page \${nextPageStr}</a>\`
+                              : html` & nbsp
+    ;`}
+                        </th>
+                      </tr>\`
+                    : html``
+                }
+              </tbody>
+            </table>
+            <p class="mt-4 max-w-prose">
+              All of this text is extracted from
+              <a href="${CONFIG.PDF_URL}">${CONFIG.PDF_FILE}</a>
+              (© 2016 Goethe-Institut und ÖSD) because their PDF was unusable for
+              making flashcards.
+            </p>
+            <p class="max-w-prose">
+              I elaborated on
+              <a href="https://wejn.org/2023/12/extracting-data-from-goethe-zertifikat-b1-wortliste/">
+                the extraction process
+              </a>
+              on my blog.
+            </p>
+            <p class="max-w-prose">
+              It is highly likely you can use this for personal purposes, but I
+              make no claim that I own the resulting data. In other words: if I
+              were you, I wouldn't go using this in any commercial capacity.
+            </p>
+          </div>
+        \`
+        render(template, document.getElementById('app'))
+      }
+
+      update()
+    </script>
+  </body>
 </html>`
 
     return html
