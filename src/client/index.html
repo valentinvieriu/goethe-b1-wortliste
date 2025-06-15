@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Goethe Zertifikat B1 Wortliste</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'goethe-blue': '#005AA0',
+              'goethe-light': '#E8F4FD',
+            },
+          },
+        },
+      }
+    </script>
+    <script src="ui.js" defer></script>
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+      <div id="app">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden text-center py-12">
+          <div class="text-goethe-blue">
+            <div
+              class="animate-spin rounded-full h-8 w-8 border-b-2 border-goethe-blue mx-auto mb-4"
+            ></div>
+            <h1 class="text-xl font-medium">Loading vocabulary data...</h1>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

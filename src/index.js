@@ -72,29 +72,32 @@ export class GoetheBrListProcessor {
     const pageNumbers = []
     for (let p = CONFIG.PAGE_START; p <= CONFIG.PAGE_END; p++) pageNumbers.push(p)
 
-    let allRawData = []
-
+    // Process all pages in parallel, creating intermediate files
     await this.runWithConcurrency(pageNumbers, cpuCount, async pageNum => {
       try {
         await this.pageProcessor.processPage(pageNum)
-
-        // Aggregate raw data for the combined HTML/CSV
-        const paddedPage = pageNum.toString().padStart(3, '0')
-        const leftFile = `${CONFIG.OUTPUT_DIR}/${paddedPage}-l.json`
-        const rightFile = `${CONFIG.OUTPUT_DIR}/${paddedPage}-r.json`
-
-        if (await fileExists(leftFile)) {
-          const leftData = JSON.parse(await fs.readFile(leftFile, 'utf8'))
-          allRawData = this.dataProcessor.processRawData(leftData, allRawData)
-        }
-        if (await fileExists(rightFile)) {
-          const rightData = JSON.parse(await fs.readFile(rightFile, 'utf8'))
-          allRawData = this.dataProcessor.processRawData(rightData, allRawData)
-        }
       } catch (err) {
         console.error(`Error processing page ${pageNum}:`, err.message)
       }
     })
+
+    // Aggregate data sequentially to ensure deterministic order
+    console.log('Aggregating data from all pages...')
+    let allRawData = []
+    for (const pageNum of pageNumbers) {
+      const paddedPage = pageNum.toString().padStart(3, '0')
+      const leftFile = `${CONFIG.OUTPUT_DIR}/${paddedPage}-l.json`
+      const rightFile = `${CONFIG.OUTPUT_DIR}/${paddedPage}-r.json`
+
+      if (await fileExists(leftFile)) {
+        const leftData = JSON.parse(await fs.readFile(leftFile, 'utf8'))
+        allRawData = this.dataProcessor.processRawData(leftData, allRawData)
+      }
+      if (await fileExists(rightFile)) {
+        const rightData = JSON.parse(await fs.readFile(rightFile, 'utf8'))
+        allRawData = this.dataProcessor.processRawData(rightData, allRawData)
+      }
+    }
 
     // Produce combined output
     console.log('Generating final combined files…')
@@ -137,13 +140,15 @@ export class GoetheBrListProcessor {
   async generateCombinedOutputs(allRawData) {
     const processedData = await this.dataProcessor.processExtractedData(allRawData)
     const csv = await this.dataProcessor.generateCSV(processedData, 'all')
-    const html = await this.dataProcessor.generateClientHTML()
 
     await fs.writeFile(`${CONFIG.OUTPUT_DIR}/all.csv`, csv)
-    await fs.writeFile(`${CONFIG.OUTPUT_DIR}/index.html`, html)
+
+    // Copy client-side UI files
+    await fs.copyFile('src/client/index.html', `${CONFIG.OUTPUT_DIR}/index.html`)
+    await fs.copyFile('src/client/ui.js', `${CONFIG.OUTPUT_DIR}/ui.js`)
 
     console.log(`✓ Generated all.csv with ${processedData.length} vocabulary entries`)
-    console.log('✓ Generated index.html (client-side interface that reads CSV)')
+    console.log('✓ Copied client-side UI to output directory (index.html, ui.js)')
   }
 
   /**

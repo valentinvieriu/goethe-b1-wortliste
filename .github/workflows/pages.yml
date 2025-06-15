@@ -34,7 +34,7 @@ jobs:
       - name: Prepare Pages content
         run: |
           mkdir gh-pages
-          cp output/*.html output/*.csv gh-pages/
+          cp output/index.html output/ui.js output/*.csv gh-pages/
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

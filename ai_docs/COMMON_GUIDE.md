@@ -63,15 +63,18 @@ node src/index.js --help             # Show usage help
 
 ```
 src/
-├── index.js                 # Main CLI entry point and orchestration
+├── client/
+│   ├── index.html          # Client-side HTML interface
+│   └── ui.js               # Client-side JavaScript logic
+├── index.js                # Main CLI entry point and orchestration
 ├── config.js               # Configuration constants and break overrides
 ├── utils/fs.js             # File system utilities and helpers
 └── processors/
-    ├── pdf-converter.js    # PDF to PNG conversion via pdftocairo
-    ├── image-processor.js  # ImageMagick operations (crop, annotate)
-    ├── break-detector.js   # XPM pixel analysis for text boundaries
-    ├── text-extractor.js   # Coordinate-based OCR via pdftotext
-    ├── data-processor.js   # Text cleaning and HTML/CSV generation
+    ├── pdf-converter.js    # PDF to PNG conversion via MuPDF.js
+    ├── image-processor.js  # sharp operations (crop, annotate)
+    ├── break-detector.js   # Pixel analysis for text boundaries
+    ├── text-extractor.js   # Coordinate-based OCR via MuPDF.js
+    ├── data-processor.js   # Text cleaning and CSV generation
     └── page-processor.js   # Page-level orchestration and caching
 ```
 
@@ -103,14 +106,14 @@ Both versions produce exactly **4792 vocabulary entries** across pages 16-102, e
 
 The system has been refactored to use **CSV as the single source of truth**:
 
-- **Processing**: Only generates CSV files during extraction and processing
-- **HTML Interface**: Client-side JavaScript reads CSV files dynamically
+- **Processing**: Only generates CSV files during extraction and processing.
+- **HTML Interface**: A static HTML file (`src/client/index.html`) and its corresponding JavaScript (`src/client/ui.js`) are copied to the `output/` directory. The JavaScript dynamically reads the CSV files for display.
 - **Benefits**:
-  - Eliminates data inconsistencies between HTML and CSV
-  - Faster processing (no server-side HTML generation)
-  - Simpler deployment (just serve static files)
-  - CSV files can be used directly in other applications
-- **Usage**: Open `output/index.html` in a browser to view the interactive interface
+  - Eliminates data inconsistencies between HTML and CSV.
+  - Faster processing (no server-side HTML generation).
+  - Simpler deployment (just serve static files).
+  - CSV files can be used directly in other applications.
+- **Usage**: Open `output/index.html` in a browser to view the interactive interface.
 
 ## Legacy Ruby Scripts (Still Available)
 
@@ -144,8 +147,8 @@ JSON data → generate.js → HTML + CSV
 ### Node.js Version (Recommended)
 
 - Node.js 22 or higher
-- Poppler utilities (`pdftocairo`, `pdftotext`)
 - `sharp` (npm package for image processing)
+- `mupdf` (npm package for PDF processing)
 
 ### Ruby Version (Legacy)
 
