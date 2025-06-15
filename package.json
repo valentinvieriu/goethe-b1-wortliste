@@ -12,6 +12,7 @@
     "process:all": "node src/index.js --all",
     "process:page": "node src/index.js --page",
     "test": "node --test test/*.test.js",
+    "test:ci": "LIGHT_TESTS=1 node --test test/*.test.js",
     "clean": "rm -rf output/",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint src/ test/ --fix",

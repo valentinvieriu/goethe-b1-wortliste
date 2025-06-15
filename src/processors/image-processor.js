@@ -4,10 +4,21 @@ import { CONFIG } from '../config.js'
 import { fileExists, padPageNumber } from '../utils/fs.js'
 
 export class ImageProcessor {
+  /**
+   * Utility for cropping and annotating page images.
+   */
   constructor() {
     this.outputDir = CONFIG.OUTPUT_DIR
   }
 
+  /**
+   * Extract raw pixel data for a column on the page.
+   *
+   * @param {string} imagePath - Path to the page image.
+   * @param {number} pageNum - Page number for error reporting.
+   * @param {'l'|'r'} column - Column identifier.
+   * @returns {Promise<{data:Buffer,info:import('sharp').OutputInfo}>} Raw pixel info.
+   */
   async getColumnRawPixels(imagePath, pageNum, column) {
     const paddedPage = padPageNumber(pageNum)
     const columnConfig = column === 'l' ? CONFIG.LEFT_COLUMN : CONFIG.RIGHT_COLUMN
@@ -34,6 +45,17 @@ export class ImageProcessor {
     }
   }
 
+  /**
+   * Crop a rectangular region from an image and save it to disk.
+   *
+   * @param {string} imagePath - Source image.
+   * @param {number} x - X offset.
+   * @param {number} y - Y offset.
+   * @param {number} width - Width of crop.
+   * @param {number} height - Height of crop.
+   * @param {string} outputPath - Destination PNG path.
+   * @returns {Promise<string>} Path of the written file.
+   */
   async cropRegion(imagePath, x, y, width, height, outputPath) {
     try {
       await sharp(imagePath)
@@ -45,6 +67,14 @@ export class ImageProcessor {
     }
   }
 
+  /**
+   * Overlay semi-transparent rectangles on an image to highlight regions.
+   *
+   * @param {string} imagePath - Source image path.
+   * @param {string} outputPath - Destination file for the annotated image.
+   * @param {Array<{x0:number,y0:number,x1:number,y1:number}>} rectangles - Areas to highlight.
+   * @returns {Promise<string>} Path to the annotated image.
+   */
   async annotateImage(imagePath, outputPath, rectangles) {
     try {
       // Read the input image into a buffer to avoid potential file locking/path conflicts
@@ -90,6 +120,12 @@ export class ImageProcessor {
     }
   }
 
+  /**
+   * Remove a temporary file if it exists.
+   *
+   * @param {string} filePath - File to delete.
+   * @returns {Promise<void>} Resolves when deletion attempted.
+   */
   async cleanup(filePath) {
     try {
       await fs.unlink(filePath)

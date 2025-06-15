@@ -3,11 +3,19 @@ import { promises as fs } from 'fs'
 import { CONFIG } from '../config.js'
 
 export class TextExtractor {
+  /**
+   * Create a new text extractor bound to the configured PDF file.
+   */
   constructor() {
     this.pdfFile = CONFIG.PDF_FILE
     this._doc = null // Loaded lazily
   }
 
+  /**
+   * Lazily load the PDF document, caching the MuPDF instance.
+   *
+   * @returns {Promise<mupdf.PDFDocument>} Loaded document instance.
+   */
   async _docPromise() {
     if (this._doc) return this._doc
     const buffer = await fs.readFile(this.pdfFile)
@@ -19,6 +27,13 @@ export class TextExtractor {
    * Extract the raw text from a rectangular region on a page.
    * Re-implements the pdftotext bounding-box mode using MuPDF’s
    * StructuredText JSON output.
+   *
+   * @param {number} pageNum - Page number (1-based).
+   * @param {number} x - X offset in image pixels.
+   * @param {number} y - Y offset in image pixels.
+   * @param {number} width - Width of region in pixels.
+   * @param {number} height - Height of region in pixels.
+   * @returns {Promise<string>} Extracted text.
    */
   async extractTextFromRegion(pageNum, x, y, width, height) {
     // MuPDF StructuredText works in PDF points (72 dpi);
@@ -54,7 +69,14 @@ export class TextExtractor {
       .trim()
   }
 
-  /** unchanged public helper */
+  /**
+   * Extract text for a series of [y0, y1] ranges within a column.
+   *
+   * @param {number} pageNum - Page number to process.
+   * @param {Array<Array<number>>} ranges - Detected break ranges.
+   * @param {'l'|'r'} column - Column identifier.
+   * @returns {Promise<Array>} Array of extracted entry objects.
+   */
   async extractFromRanges(pageNum, ranges, column) {
     const columnConfig = column === 'l' ? CONFIG.LEFT_COLUMN : CONFIG.RIGHT_COLUMN
     const results = []
@@ -97,6 +119,15 @@ export class TextExtractor {
   }
 
   // --- the rest of the original helper methods stay unchanged ---
+  /**
+   * Apply ad-hoc fixes for a handful of problematic pages.
+   *
+   * @param {number} pageNum - Current page number.
+   * @param {'l'|'r'} column - Column identifier.
+   * @param {string} def - Definition text.
+   * @param {string} example - Example text.
+   * @returns {[string, string]} Corrected definition and example.
+   */
   applyPageSpecificFixes(pageNum, column, def, example) {
     // (same as original implementation)
     if (pageNum === 79 && column === 'l') {
@@ -111,6 +142,13 @@ export class TextExtractor {
     return [def, example]
   }
 
+  /**
+   * Persist extracted data as pretty-printed JSON.
+   *
+   * @param {Array} data - Entries to store.
+   * @param {string} outputPath - Destination path.
+   * @returns {Promise<void>} Resolves when the file is written.
+   */
   async saveExtractedData(data, outputPath) {
     await fs.writeFile(outputPath, JSON.stringify(data, null, 2))
   }

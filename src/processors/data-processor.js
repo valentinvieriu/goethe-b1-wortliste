@@ -3,8 +3,19 @@ import { spawn } from 'child_process'
 import { CONFIG } from '../config.js'
 
 export class DataProcessor {
+  /**
+   * Simple wrapper for processing raw and extracted data.
+   */
   constructor() {}
 
+  /**
+   * Merge raw OCR entries into a buffer, combining examples that
+   * span multiple lines.
+   *
+   * @param {Array<{definition:string,example:string}>} inputData - Newly extracted data.
+   * @param {Array<{definition:string,example:string}>} buf - Buffer to append to.
+   * @returns {Array<{definition:string,example:string}>} Updated buffer.
+   */
   processRawData(inputData, buf) {
     for (const item of inputData) {
       const { definition, example } = item
@@ -23,6 +34,12 @@ export class DataProcessor {
     return buf
   }
 
+  /**
+   * Clean up and filter raw entries to prepare them for output.
+   *
+   * @param {Array<{definition:string,example:string}>} inputData - Raw OCR results.
+   * @returns {Promise<Array<{definition:string,example:string}>>} Cleaned entries.
+   */
   async processExtractedData(inputData) {
     const processedData = []
 
@@ -41,6 +58,12 @@ export class DataProcessor {
     return processedData
   }
 
+  /**
+   * Normalize the definition text extracted from the PDF.
+   *
+   * @param {string} def - Raw definition string.
+   * @returns {string} Cleaned definition.
+   */
   processDefinition(def) {
     if (!def) return ''
 
@@ -79,6 +102,12 @@ export class DataProcessor {
     return processed.trim()
   }
 
+  /**
+   * Normalize the example sentence or list.
+   *
+   * @param {string} example - Raw example text.
+   * @returns {string} Cleaned example.
+   */
   processExample(example) {
     if (!example) return ''
 
@@ -146,6 +175,13 @@ export class DataProcessor {
     return processed.trim()
   }
 
+  /**
+   * Apply a set of textual tweaks that are easier to perform
+   * programmatically than by hand.
+   *
+   * @param {string} def - Input definition text.
+   * @returns {string} Tweaked definition text.
+   */
   applyCosmeticFixes(def) {
     return def
       .replace(/raus\(heraus/, 'raus- (heraus')
@@ -160,6 +196,11 @@ export class DataProcessor {
       )
   }
 
+  /**
+   * Retrieve the current git version string for inclusion in outputs.
+   *
+   * @returns {Promise<string>} Git describe output or 'unknown'.
+   */
   async getGitVersion() {
     return new Promise(resolve => {
       const git = spawn('git', ['describe', '--always', '--dirty'], {
@@ -196,6 +237,13 @@ export class DataProcessor {
     })
   }
 
+  /**
+   * Create an HTML table for a single page or for the combined dataset.
+   *
+   * @param {Array<{definition:string,example:string}>} data - Cleaned entries.
+   * @param {string|number} page - Page number or 'all'.
+   * @returns {Promise<string>} Generated HTML document.
+   */
   async generateHTML(data, page) {
     const gitVersion = await this.getGitVersion()
     const generatedAt = new Date().toLocaleString('en-US', {
@@ -283,6 +331,13 @@ using this in any commercial capacity.
     return html
   }
 
+  /**
+   * Create CSV output from processed vocabulary entries.
+   *
+   * @param {Array<{definition:string,example:string}>} data - Cleaned entries.
+   * @param {string|number} page - Page number or 'all'.
+   * @returns {Promise<string>} CSV content.
+   */
   async generateCSV(data, page) {
     const gitVersion = await this.getGitVersion()
     const generatedAt = new Date().toLocaleString('en-US', {
