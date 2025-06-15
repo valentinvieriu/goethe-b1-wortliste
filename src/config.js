@@ -12,8 +12,14 @@ function getEnvBool(name, defaultValue = false) {
 export const CONFIG = {
   // Environment variables
   DEBUG: getEnvBool('DEBUG', false),
-  PDF_URL: getEnvVar('PDF_URL', 'https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf'),
-  PDF_URL_FALLBACK: getEnvVar('PDF_URL_FALLBACK', 'https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf'),
+  PDF_URL: getEnvVar(
+    'PDF_URL',
+    'https://web.archive.org/web/20250601000000/https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf',
+  ),
+  PDF_URL_FALLBACK: getEnvVar(
+    'PDF_URL_FALLBACK',
+    'https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_Wortliste.pdf',
+  ),
 
   // PDF processing
   PDF_FILE: getEnvVar('PDF_FILENAME', 'Goethe-Zertifikat_B1_Wortliste.pdf'),

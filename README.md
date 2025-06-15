@@ -112,12 +112,12 @@ PDF_URL_FALLBACK=https://www.goethe.de/pro/relaunch/prf/de/Goethe-Zertifikat_B1_
 
 ### Docker Compose Services
 
-| Service | Description | Usage |
-|---------|-------------|--------|
-| `goethe-b1` | Main processing (all pages) | `docker-compose run --rm goethe-b1` |
-| `goethe-b1-page` | Single page processing | `PAGE=42 docker-compose --profile page run --rm goethe-b1-page` |
-| `goethe-b1-test` | Test runner | `docker-compose --profile test run --rm goethe-b1-test` |
-| `goethe-b1-dev` | Development environment | `docker-compose --profile dev run --rm goethe-b1-dev` |
+| Service          | Description                 | Usage                                                           |
+| ---------------- | --------------------------- | --------------------------------------------------------------- |
+| `goethe-b1`      | Main processing (all pages) | `docker-compose run --rm goethe-b1`                             |
+| `goethe-b1-page` | Single page processing      | `PAGE=42 docker-compose --profile page run --rm goethe-b1-page` |
+| `goethe-b1-test` | Test runner                 | `docker-compose --profile test run --rm goethe-b1-test`         |
+| `goethe-b1-dev`  | Development environment     | `docker-compose --profile dev run --rm goethe-b1-dev`           |
 
 ### Custom Configuration
 
@@ -139,6 +139,7 @@ See [DOCKER.md](DOCKER.md) for comprehensive Docker documentation.
 All generated files are placed in the `output/` directory:
 
 ### Page Processing
+
 - `output/Goethe-Zertifikat_B1_Wortliste-016.png` - Source page images
 - `output/042-l-crop-001.png` - Cropped vocabulary regions
 - `output/042-l.json` - Extracted data per column
@@ -146,6 +147,7 @@ All generated files are placed in the `output/` directory:
 - `output/042-annot.png` - Annotated pages showing detection
 
 ### Final Output
+
 - `output/042.html` - Individual page HTML
 - `output/042.csv` - Individual page CSV
 - `output/all.html` - Combined HTML (all pages)
@@ -156,10 +158,12 @@ All generated files are placed in the `output/` directory:
 ### Requirements
 
 **System Dependencies**:
+
 - Node.js 22+
 - No system dependencies required (pure WebAssembly)
 
 **npm Dependencies**:
+
 - `mupdf` - PDF processing (WebAssembly)
 - `sharp` - Image processing
 
@@ -196,24 +200,26 @@ node src/index.js --help    # Show help
 
 ## 📊 Performance Comparison
 
-| Metric | Ruby Version | Node.js Version | Improvement |
-|--------|--------------|-----------------|-------------|
-| Processing Speed | ~25-30 min | ~6-8 min | **75% faster** |
-| Memory Usage | ~300-400MB | ~100-200MB | **50% less** |
-| Error Handling | Stop on failure | Continue processing | **More robust** |
-| Caching | Marshal files | JSON files | **Better debugging** |
-| Dependencies | Ruby + poppler | Node.js + WASM | **Simpler setup** |
-| Container Size | N/A | 492MB | **Minimal footprint** |
+| Metric           | Ruby Version    | Node.js Version     | Improvement           |
+| ---------------- | --------------- | ------------------- | --------------------- |
+| Processing Speed | ~25-30 min      | ~6-8 min            | **75% faster**        |
+| Memory Usage     | ~300-400MB      | ~100-200MB          | **50% less**          |
+| Error Handling   | Stop on failure | Continue processing | **More robust**       |
+| Caching          | Marshal files   | JSON files          | **Better debugging**  |
+| Dependencies     | Ruby + poppler  | Node.js + WASM      | **Simpler setup**     |
+| Container Size   | N/A             | 492MB               | **Minimal footprint** |
 
 Both versions produce exactly **4,792 vocabulary entries** across pages 16-102.
 
 ## 🧪 Text Processing Features
 
 ### Encoding & Character Handling
+
 - UTF-8 encoding for German characters
 - Proper handling of umlauts and special characters
 
 ### Content Processing
+
 - OCR error corrections for specific pages
 - Date formatting fixes (e.g., "11. Mai" → "11~Mai" → "11. Mai")
 - Broken list formatting repairs
@@ -221,6 +227,7 @@ Both versions produce exactly **4,792 vocabulary entries** across pages 16-102.
 - 15+ cosmetic fixes for specific vocabulary entries
 
 ### Output Formats
+
 - **HTML**: Responsive table with German vocabulary and examples
 - **CSV**: Two-column format optimized for flashcard applications (Anki, etc.)
 
@@ -229,6 +236,7 @@ Both versions produce exactly **4,792 vocabulary entries** across pages 16-102.
 ### Common Issues
 
 **Application not working?**
+
 ```bash
 # Check Node.js version
 node --version  # Should be 22+
@@ -241,6 +249,7 @@ docker-compose config
 ```
 
 **Build failures?**
+
 ```bash
 # Clear Docker cache
 docker system prune -f
@@ -250,6 +259,7 @@ docker-compose build --no-cache
 ```
 
 **PDF download issues?**
+
 ```bash
 # Check if PDF exists
 ls -la Goethe-Zertifikat_B1_Wortliste.pdf

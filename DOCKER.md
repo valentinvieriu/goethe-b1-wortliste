@@ -42,6 +42,7 @@ cp .env.example .env
 ```
 
 Example `.env`:
+
 ```env
 DEBUG=true
 PDF_FILENAME=custom-wordlist.pdf
@@ -80,14 +81,14 @@ docker-compose build --build-arg PDF_URL=https://example.com/custom.pdf
 
 ## Configuration Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEBUG` | `false` | Enable debug logging |
-| `PDF_FILENAME` | `Goethe-Zertifikat_B1_Wortliste.pdf` | Name of the PDF file |
-| `PDF_URL` | Web Archive URL | Primary download URL |
-| `PDF_URL_FALLBACK` | Original Goethe URL | Backup download URL |
-| `PAGE` | `42` | Page number for single page processing |
-| `CUSTOM_PDF_PATH` | - | Path to mount custom PDF file |
+| Variable           | Default                              | Description                            |
+| ------------------ | ------------------------------------ | -------------------------------------- |
+| `DEBUG`            | `false`                              | Enable debug logging                   |
+| `PDF_FILENAME`     | `Goethe-Zertifikat_B1_Wortliste.pdf` | Name of the PDF file                   |
+| `PDF_URL`          | Web Archive URL                      | Primary download URL                   |
+| `PDF_URL_FALLBACK` | Original Goethe URL                  | Backup download URL                    |
+| `PAGE`             | `42`                                 | Page number for single page processing |
+| `CUSTOM_PDF_PATH`  | -                                    | Path to mount custom PDF file          |
 
 ## Volume Mounts
 
