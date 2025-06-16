@@ -156,10 +156,9 @@ export class GoetheBrListProcessor {
 
     // Copy client-side UI files
     await fs.copyFile('src/client/index.html', `${CONFIG.OUTPUT_DIR}/index.html`)
-    await fs.copyFile('src/client/ui.js', `${CONFIG.OUTPUT_DIR}/ui.js`)
 
     console.log(`✓ Generated all.csv with ${processedData.length} vocabulary entries`)
-    console.log('✓ Copied client-side UI to output directory (index.html, ui.js)')
+    console.log('✓ Copied client-side UI to output directory (index.html)')
   }
 
   /**
