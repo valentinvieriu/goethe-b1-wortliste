@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Write",
+      "MultiEdit",
+      "Edit",
+      "Bash",
+      "Read",
+      "Glob",
+      "Grep",
+      "LS",
+      "WebFetch",
+      "TodoRead",
+      "TodoWrite",
+      "Bash(npm test)",
+      "Bash(node:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": []
+  },
+  "features": {
+    "extendedThinking": true,
+    "toolUse": true,
+    "codeExecution": true
+  },
+  "preferences": {
+    "verbosity": "concise",
+    "codeStyle": "modern-es",
+    "testFirst": true,
+    "lintBeforeCommit": true
+  }
+}
