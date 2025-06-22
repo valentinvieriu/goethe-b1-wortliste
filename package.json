@@ -21,10 +21,12 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "sharp": "^0.33.2",
-    "mupdf": "^1.1.0"
+    "csv-stringify": "^6.5.2",
+    "mupdf": "^1.1.0",
+    "sharp": "^0.33.2"
   },
   "devDependencies": {
+    "csv-parse": "^5.6.0",
     "eslint": "^9.28.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.0",

@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import { spawn } from 'child_process'
+import { stringify } from 'csv-stringify/sync'
 import { CONFIG } from '../config.js'
 
 /**
@@ -233,6 +234,7 @@ export class DataProcessor {
   /**
    * Creates CSV content from processed vocabulary entries.
    * The CSV includes a header with the git version and generation timestamp.
+   * Uses csv-stringify library to properly handle multiline content and escaping.
    *
    * @param {Array<{definition: string, example: string}>} data - The array of cleaned vocabulary entries.
    * @param {string|number} page - The page number or 'all', used for context (not in output).
@@ -251,14 +253,20 @@ export class DataProcessor {
       timeZoneName: 'short',
     })
 
-    let csv = `"Goethe Zertifikat B1 Wortliste","Version ${gitVersion} -- generated at ${generatedAt}"\n`
+    // Prepare data for CSV generation
+    const csvData = [
+      // Header row with metadata
+      ['Goethe Zertifikat B1 Wortliste', `Version ${gitVersion} -- generated at ${generatedAt}`],
+      // Vocabulary entries
+      ...data.map(item => [item.definition, item.example]),
+    ]
 
-    for (const item of data) {
-      const def = item.definition.replace(/"/g, '""')
-      const example = item.example.replace(/"/g, '""')
-      csv += `"${def}","${example}"\n`
-    }
-
-    return csv
+    // Generate CSV using proper library that handles multiline content
+    return stringify(csvData, {
+      quoted: true,
+      quoted_empty: true,
+      quoted_match: /[\r\n"]/,
+      escape: '"',
+    })
   }
 }
